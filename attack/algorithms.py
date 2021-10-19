@@ -82,7 +82,7 @@ class WrapOptim:
 
 def get_optim(name, params, epsilon, **kwargs) -> I_FGSM:
     if name == 'I-FGSM': 
-        return I_FGSM(params, epsilon)
+        return I_FGSM(params, epsilon, **kwargs)
     if name == 'MI-FGSM':
         return MI_FGSM(params, epsilon, **kwargs)
 
