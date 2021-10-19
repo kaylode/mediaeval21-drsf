@@ -45,10 +45,11 @@ class Attacker:
         results = att_img.clone()
         return results
 
-    def attack(self, victim, cv2_image, deid_fn, **kwargs):
+    def attack(self, victim, cv2_image, deid_fn, face_box=None, targets=None, **kwargs):
         
         # Generate target
-        face_box, targets = self._generate_targets(victim, cv2_image)
+        if face_box is None and targets is None:
+            face_box, targets = self._generate_targets(victim, cv2_image)
         
         # De-id image with face box
         deid = self._generate_deid(cv2_image, face_box, deid_fn)
