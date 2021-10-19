@@ -40,7 +40,8 @@ class MTCNNDetector(BaseDetector):
     def postprocess(self, image):
         image = image.detach().numpy()
         unnormalized = np.clip(image * 128.0 + 127.5, 0, 255).astype(np.uint8)
-        return unnormalized
+        cv2_image = unnormalized.squeeze().transpose((1,2,0))
+        return cv2_image
 
     def forward(self, imgs, target_bboxes):
         n = target_bboxes.shape[0]
