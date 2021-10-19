@@ -28,6 +28,7 @@ class RetinaFaceDetector(nn.Module):
         super(RetinaFaceDetector, self).__init__()
 
         self.model = retinaface_mnet(pretrained=True)
+        self.model.eval()
         self.config = self.model.cfg
     
     def preprocess(self, cv2_image):
@@ -50,7 +51,9 @@ class RetinaFaceDetector(nn.Module):
         x_tensor = x.clone()
         if len(x_tensor.shape) == 3:
             x_tensor = x_tensor.unsqueeze(0)
-        results = self.model.detect(x_tensor) # xmin, ymin, xmax, ymax, scores
+
+        with torch.no_grad():
+            results = self.model.detect(x_tensor) # xmin, ymin, xmax, ymax, scores
         return results
 
     def make_targets(self, predictions, width, height):
