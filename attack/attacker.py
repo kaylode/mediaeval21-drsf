@@ -27,7 +27,7 @@ class Attacker:
         predictions = victim.detect(query_tensor)
 
         # Make targets and face_box
-        targets = victim.make_targets(predictions, cv2_image.shape[1], cv2_image.shape[0])
+        targets = victim.make_targets(predictions, cv2_image)
         face_box = victim.get_face_box(predictions)
 
         return face_box, targets
