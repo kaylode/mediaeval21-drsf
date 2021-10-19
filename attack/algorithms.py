@@ -1,3 +1,8 @@
+"""
+Copied from https://github.com/honguyenhaituan/PrivacyPreservingFaceRecognition/blob/16afc9df67afafe626a42ae7a5173547e9adae21/attacks/optim.py#L80
+author: honguyenhaituan
+"""
+
 import torch
 from torch.optim import Adadelta, Adagrad, Adam, AdamW, Adamax, ASGD, RMSprop, Rprop, SGD
 from torch.optim.optimizer import Optimizer
