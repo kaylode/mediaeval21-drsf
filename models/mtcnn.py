@@ -1,21 +1,22 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 import numpy as np
 from PIL import Image
+
+from .base import BaseDetector
 from .face_det.facenet import MTCNN
 
 def fixed_image_standardization(image_tensor):
     processed_tensor = (image_tensor - 127.5) / 128.0
     return processed_tensor
 
-class MTCNNDetector(nn.Module):
+class MTCNNDetector(BaseDetector):
     def __init__(self, image_size=160, thresholds=[0.6, 0.7, 0.7], loss_fn='l2'):
         super(MTCNNDetector, self).__init__()
         
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
-        self.optimizer = None
 
         if loss_fn == 'l2':
             self.loss_fn = nn.MSELoss()
@@ -24,7 +25,7 @@ class MTCNNDetector(nn.Module):
         else:
             raise ValueError('Loss function does not exist')
 
-        self.mtcnn = MTCNN(
+        self.model = MTCNN(
             image_size=image_size, margin=0, min_face_size=20, select_largest =True,
             thresholds=thresholds, factor=0.709, post_process=True,
             device=device, keep_all=False
@@ -41,7 +42,7 @@ class MTCNNDetector(nn.Module):
         if n != 1:
             raise ValueError('Currently only batch size 1 is supported.')
         
-        adv_det, adv_points = self.mtcnn.forward(imgs)
+        adv_det, adv_points = self.model.forward(imgs)
         # faces = model.extract(image, boxes, save_path=None)
         adv_scores = adv_det[:, -1]
         adv_bboxes = adv_det[:, :-1]
@@ -55,24 +56,19 @@ class MTCNNDetector(nn.Module):
         return loss
 
     def detect(self, x):
-
-        x_tensor = x.copy()
-        _bboxes, _points = self.mtcnn.detect(x_tensor) # xmin, ymin, xmax, ymax, scores
+        x_tensor = x.clone()
+        if len(x_tensor.shape) == 3:
+            x_tensor = x_tensor.unsqueeze(0)
+        with torch.no_grad():
+            _bboxes, _points = self.model.detect(x_tensor) # xmin, ymin, xmax, ymax, scores
         return _bboxes
 
-    def compute_gradient(self, x, target_detections):
+    def make_targets(self, predictions, image):
+        return predictions
 
-        x_tensor = torch.from_numpy(x)[None].cuda().float()
-        x_tensor.requires_grad = True
-
-        _bboxes = torch.from_numpy(target_detections[:, :-1]).float().cuda()
-        _score = torch.from_numpy(target_detections[:, -1]).float()
-
-        loss = self.forward(x_tensor, _bboxes)
-
-        if self.optimizer is not None:
-            self.optimizer.zero_grad()
-
-        self.mtcnn.zero_grad()
-        loss.backward()
-        return x_tensor.grad.data.cpu().numpy().squeeze(0)
+    def get_face_box(self, predictions, return_probs=False):
+        bboxes = predictions
+        face_box = bboxes[0].squeeze(0).numpy().astype(np.int).tolist()
+        if not return_probs:
+            face_box = face_box[:-1]
+        return face_box
