@@ -5,7 +5,7 @@ class Pixelate:
     def __init__(self, blocks=3) -> None:
         self.blocks = blocks
 
-    def forward(self, image, face_box):
+    def __call__(self, image, face_box):
         x1,y1,x2,y2 = face_box
         crop = image[y1:y2, x1:x2, :]
         
@@ -40,7 +40,7 @@ class Blur:
     def __init__(self, kernel_size=3) -> None:
         self.kernel_size = (kernel_size, kernel_size)
 
-    def forward(self, image, face_box):
+    def __call__(self, image, face_box):
         x1,y1,x2,y2 = face_box
         crop = image[y1:y2, x1:x2, :]
         crop = cv2.blur(crop, self.kernel_size)
