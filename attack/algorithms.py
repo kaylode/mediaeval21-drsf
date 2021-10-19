@@ -88,25 +88,25 @@ def get_optim(name, params, epsilon, **kwargs) -> I_FGSM:
 
     optimizer = None
     if name == 'Adadelta':
-        optimizer = Adadelta(params, **kwargs)
+        optimizer = Adadelta(params)
     if name == 'Adagrad':
-        optimizer = Adagrad(params, **kwargs)
+        optimizer = Adagrad(params)
     if name == 'Adam':
-        optimizer = Adam(params, **kwargs)
+        optimizer = Adam(params)
     if name == 'AdamW':
-        optimizer = AdamW(params, **kwargs)
+        optimizer = AdamW(params)
     if name == 'Adamax':
-        optimizer = Adamax(params, **kwargs)
+        optimizer = Adamax(params)
     if name == 'ASGD':
-        optimizer = ASGD(params, **kwargs)
+        optimizer = ASGD(params)
     if name == 'RMSprop':
-        optimizer = RMSprop(params, **kwargs)
+        optimizer = RMSprop(params, lr=0.004)
     if name == 'Rprop':
-        optimizer = Rprop(params, **kwargs)
+        optimizer = Rprop(params)
     if name == 'SGD':
-        optimizer = SGD(params, **kwargs)
+        optimizer = SGD(params)
     
     if optimizer:
-        return WrapOptim(params, epsilon, optimizer)
+        return WrapOptim(params, epsilon, optimizer, **kwargs)
 
     return None
