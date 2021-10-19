@@ -4,6 +4,7 @@ import torch.nn as nn
 import numpy as np
 from PIL import Image
 
+from .base import BaseDetector
 from .face_det.retinaface.models.retinaface import retinaface_mnet
 from .face_det.retinaface.layers.modules.multibox_loss import MultiBoxLoss
 from .face_det.retinaface.layers.functions.prior_box import PriorBox
@@ -23,7 +24,7 @@ class DetectionLoss(nn.Module):
         return  self.cfg['loc_weight'] * loss_l + loss_c
 
 
-class RetinaFaceDetector(nn.Module):
+class RetinaFaceDetector(BaseDetector):
     def __init__(self):
         super(RetinaFaceDetector, self).__init__()
 
@@ -56,7 +57,8 @@ class RetinaFaceDetector(nn.Module):
             results = self.model.detect(x_tensor) # xmin, ymin, xmax, ymax, scores
         return results
 
-    def make_targets(self, predictions, width, height):
+    def make_targets(self, predictions, image):
+        width, height = image.shape[1], image.shape[0]
         bboxes, landmarks = predictions
         target = []
         for box, landmark in zip(bboxes, landmarks):
@@ -77,6 +79,6 @@ class RetinaFaceDetector(nn.Module):
     def get_face_box(self, predictions, return_probs=False):
         bboxes, _ = predictions
         face_box = bboxes[0].squeeze(0).numpy().astype(np.int).tolist()
-        if return_probs:
+        if not return_probs:
             face_box = face_box[:-1]
         return face_box
