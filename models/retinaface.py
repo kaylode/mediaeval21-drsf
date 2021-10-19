@@ -74,7 +74,9 @@ class RetinaFaceDetector(nn.Module):
 
         return target
 
-    def get_face_box(self, predictions):
+    def get_face_box(self, predictions, return_probs=False):
         bboxes, _ = predictions
-        face_box = bboxes[0].squeeze(0)[:-1].numpy().astype(np.int).tolist()
+        face_box = bboxes[0].squeeze(0).numpy().astype(np.int).tolist()
+        if return_probs:
+            face_box = face_box[:-1]
         return face_box
