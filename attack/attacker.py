@@ -60,6 +60,10 @@ class Attacker:
         # Get attack algorithm
         optim = get_optim(self.optim, params=[deid_tensor], epsilon=self.eps, **kwargs)
 
+        # Adversarial attack
         deid_tensor.requires_grad = True
         adv_res = self._iterative_attack(deid_tensor, targets, victim, optim, self.n_iter)
+
+        # Postprocess, return cv2 image
+        adv_res = victim.postprocess(adv_res)
         return adv_res

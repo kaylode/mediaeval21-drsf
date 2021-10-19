@@ -37,6 +37,9 @@ class RetinaFaceDetector(BaseDetector):
         np_image = np.uint8(pil_image)
         return np_image
 
+    def postprocess(self, image):
+        return image
+
     def forward(self, imgs, target_bboxes):
         loss_fn = DetectionLoss(self.config, image_size = imgs.shape[-2:])
         

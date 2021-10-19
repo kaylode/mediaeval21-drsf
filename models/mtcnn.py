@@ -37,11 +37,15 @@ class MTCNNDetector(BaseDetector):
         normalized = fixed_image_standardization(np_image)
         return normalized
 
+    def postprocess(self, image):
+        image = image.detach().numpy()
+        unnormalized = np.clip(image * 128.0 + 127.5, 0, 255).astype(np.uint8)
+        return unnormalized
+
     def forward(self, imgs, target_bboxes):
         n = target_bboxes.shape[0]
         if n != 1:
             raise ValueError('Currently only batch size 1 is supported.')
-        
         adv_det, adv_points = self.model.forward(imgs)
         # faces = model.extract(image, boxes, save_path=None)
         adv_scores = adv_det[:, -1]
@@ -49,26 +53,26 @@ class MTCNNDetector(BaseDetector):
 
         num_preds = adv_bboxes.shape[0]
         target_bboxes = target_bboxes.repeat(num_preds, 1)
-        
+
         # Regression loss
         loss = self.loss_fn(adv_bboxes, target_bboxes)
-        
         return loss
 
     def detect(self, x):
         x_tensor = x.clone()
         if len(x_tensor.shape) == 3:
             x_tensor = x_tensor.unsqueeze(0)
+
         with torch.no_grad():
             _bboxes, _points = self.model.detect(x_tensor) # xmin, ymin, xmax, ymax, scores
         return _bboxes
 
     def make_targets(self, predictions, image):
-        return predictions
+        return torch.from_numpy(predictions[:, :-1]).cuda()
 
     def get_face_box(self, predictions, return_probs=False):
         bboxes = predictions
-        face_box = bboxes[0].squeeze(0).numpy().astype(np.int).tolist()
+        face_box = bboxes.squeeze(0).astype(np.int).tolist()
         if not return_probs:
             face_box = face_box[:-1]
         return face_box

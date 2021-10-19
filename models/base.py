@@ -7,6 +7,9 @@ class BaseDetector(nn.Module):
     def preprocess(self):
         raise NotImplementedError("This is an interface method")
 
+    def postprocess(self):
+        raise NotImplementedError("This is an interface method")
+
     def forward(self):
         raise NotImplementedError("This is an interface method")
 
