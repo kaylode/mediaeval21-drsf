@@ -3,10 +3,12 @@ from torch.optim import Adadelta, Adagrad, Adam, AdamW, Adamax, ASGD, RMSprop, R
 from torch.optim.optimizer import Optimizer
 
 class I_FGSM: 
-    def __init__(self, params, epsilon=20): 
+    def __init__(self, params, epsilon=20, min_value=0, max_value=1): 
         self.params = params
         self.epsilon = epsilon / 255
         self.alpha = 1 / 255
+        self.min_value = min_value
+        self.max_value = max_value
         self.updated_params = []
         for param in self.params:
             self.updated_params.append(torch.zeros_like(param))
@@ -23,7 +25,7 @@ class I_FGSM:
     
             n_update = torch.clamp(updated_param + self._cal_update(idx), -self.epsilon, self.epsilon)
             update = n_update - updated_param
-            n_param = torch.clamp(param + update, 0, 1)
+            n_param = torch.clamp(param + update, self.min_value, self.max_value)
             update = n_param - param
 
             param += update
@@ -35,8 +37,8 @@ class I_FGSM:
                 param.grad.zero_()
 
 class MI_FGSM(I_FGSM):
-    def __init__(self, params, epsilon=20, momemtum=0):
-        super(MI_FGSM, self).__init__(params, epsilon)
+    def __init__(self, params, epsilon=20, momemtum=0, **kwargs):
+        super(MI_FGSM, self).__init__(params, epsilon, **kwargs)
         self.momentum = momemtum
         self.o_grad = []
         for param in self.params:
@@ -55,10 +57,12 @@ class MI_FGSM(I_FGSM):
 
 class WrapOptim: 
     @torch.no_grad()
-    def __init__(self, params, epsilon, optimizer:Optimizer):
+    def __init__(self, params, epsilon, optimizer:Optimizer, min_value=0, max_value=1):
         self.optim = optimizer
         self.params = params
         self.epsilon = epsilon / 255
+        self.min_value = min_value
+        self.max_value = max_value
         self.params_init = []
         for param in params:
             self.params_init.append(param.clone())
@@ -71,7 +75,7 @@ class WrapOptim:
             update = torch.clamp(total_update, -self.epsilon, self.epsilon)
 
             param += update - total_update
-            param.clamp_(0, 1)
+            param.clamp_(self.min_value, self.max_value)
     
     def zero_grad(self):
         self.optim.zero_grad()
