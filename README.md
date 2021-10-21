@@ -7,7 +7,7 @@ from models.retinaface import MTCNNDetector
 from attack.attacker import Attacker
 from attack.deid import Pixelate
 
-input_img = cv2.imread("./assets/driver_face.JPG")
+input_img = cv2.imread("./assets/test_images/paul_rudd/1.jpg")
 cv2_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
 
 attacker = Attacker(optim='RMSprop')   # Use RMSprop method
