@@ -1,6 +1,9 @@
+"""
+model from https://github.com/timesler/facenet-pytorch
+"""
+
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 import numpy as np
 from PIL import Image

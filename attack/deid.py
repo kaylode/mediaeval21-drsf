@@ -2,10 +2,20 @@ import numpy as np
 import cv2
 
 class Pixelate:
+    """
+    Pixelate face in the image
+    :params:
+        blocks: number of pixelated blocks
+    """
     def __init__(self, blocks=3) -> None:
         self.blocks = blocks
 
     def __call__(self, image, face_box):
+        """
+        :params:
+            image: cv2 image
+            face_box: bounding box of face. In (x1,y1,x2,y2) format
+        """
         x1,y1,x2,y2 = face_box
         crop = image[y1:y2, x1:x2, :]
         
@@ -37,10 +47,20 @@ class Pixelate:
         return image
 
 class Blur:
+    """
+    Gaussian Blur face in the image
+    :params:
+        blocks: Gaussian filter size
+    """
     def __init__(self, kernel_size=3) -> None:
         self.kernel_size = (kernel_size, kernel_size)
 
     def __call__(self, image, face_box):
+        """
+        :params:
+            image: cv2 image
+            face_box: bounding box of face. In (x1,y1,x2,y2) format
+        """
         x1,y1,x2,y2 = face_box
         crop = image[y1:y2, x1:x2, :]
         crop = cv2.blur(crop, self.kernel_size)

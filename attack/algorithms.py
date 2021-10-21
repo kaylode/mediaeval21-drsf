@@ -8,10 +8,10 @@ from torch.optim import Adadelta, Adagrad, Adam, AdamW, Adamax, ASGD, RMSprop, R
 from torch.optim.optimizer import Optimizer
 
 class I_FGSM: 
-    def __init__(self, params, epsilon=20, min_value=0, max_value=1): 
+    def __init__(self, params, epsilon=8/255., alpha=1/255., min_value=0, max_value=1): 
         self.params = params
-        self.epsilon = epsilon / 255
-        self.alpha = 1 / 255
+        self.epsilon = epsilon
+        self.alpha = alpha
         self.min_value = min_value
         self.max_value = max_value
         self.updated_params = []
@@ -42,7 +42,7 @@ class I_FGSM:
                 param.grad.zero_()
 
 class MI_FGSM(I_FGSM):
-    def __init__(self, params, epsilon=20, momemtum=0, **kwargs):
+    def __init__(self, params, epsilon=8/255., momemtum=0, **kwargs):
         super(MI_FGSM, self).__init__(params, epsilon, **kwargs)
         self.momentum = momemtum
         self.o_grad = []
@@ -65,7 +65,7 @@ class WrapOptim:
     def __init__(self, params, epsilon, optimizer:Optimizer, min_value=0, max_value=1):
         self.optim = optimizer
         self.params = params
-        self.epsilon = epsilon / 255
+        self.epsilon = epsilon
         self.min_value = min_value
         self.max_value = max_value
         self.params_init = []

@@ -1,6 +1,9 @@
 import torch.nn as nn
 
 class BaseDetector(nn.Module):
+    """
+    Base Detector abstract class
+    """
     def __init__(self):
         super().__init__()
 
