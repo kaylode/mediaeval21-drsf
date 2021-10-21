@@ -30,7 +30,7 @@ from models.retinaface import RetinaFaceDetector
 from attack.attacker import Attacker
 from attack.deid import Pixelate
 
-input_img = cv2.imread("./assets/driver_face.JPG")
+input_img = cv2.imread("./assets/raw.jpg")
 cv2_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
 
 targets = [tensor([[182.4111,  64.1539, 309.9272, 243.2287, 216.0245, 131.3289, 276.3042,
