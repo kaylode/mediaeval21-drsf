@@ -1,3 +1,7 @@
+"""
+model from https://github.com/biubug6/Pytorch_Retinaface
+"""
+
 import torch
 import torch.nn as nn
 
