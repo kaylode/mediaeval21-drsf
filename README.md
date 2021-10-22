@@ -1,21 +1,23 @@
 ﻿# Driving Road Safety Forward: Video Data Privacy
 
-## Example use case
+## Example use cases
 ### Non-targeted attack
 ```python
 from models.retinaface import MTCNNDetector
-from attack.attacker import Attacker
+from attack.attacker import FaceAttacker
 from attack.deid import Pixelate
 
 input_img = cv2.imread("./assets/test_images/paul_rudd/1.jpg")
 cv2_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
 
-attacker = Attacker(optim='RMSprop')   # Use RMSprop method
+attacker = FaceAttacker(optim='RMSprop')   # Use RMSprop method
 x_adv = attacker.attack(
     cv2_image = cv2_image,            # query image
     detector = MTCNNDetector(),       # attack mtcnn
     deid_fn = Pixelate(10),           # use pixelate method
-    min_value = -1)                   # mtcnn requires
+    optim_params = {
+        "min_value": -1               # mtcnn requires
+    }) 
     
 plt.imshow(x_adv)
 ```
@@ -27,7 +29,7 @@ plt.imshow(x_adv)
 ### Targeted attack
 ```python
 from models.retinaface import RetinaFaceDetector
-from attack.attacker import Attacker
+from attack.attacker import FaceAttacker
 from attack.deid import Pixelate
 
 input_img = cv2.imread("./assets/raw.jpg")
@@ -38,7 +40,7 @@ targets = [tensor([[182.4111,  64.1539, 309.9272, 243.2287, 216.0245, 131.3289, 
             0.9995]])]
 face_box = [182, 64, 309, 243]
 
-attacker = Attacker(optim='I-FGSM')   # Use IFGSM method
+attacker = FaceAttacker(optim='I-FGSM')   # Use IFGSM method
 x_adv = attacker.attack(
     cv2_image = cv2_image,            # query image
     detector = RetinaFaceDetector(),  # attack retinaface
@@ -49,7 +51,7 @@ x_adv = attacker.attack(
 plt.imshow(x_adv)
 ```
 
-| Model prediction | Model prediction after deid + attack |
+| Input image + target | Model prediction after deid + attack |
 |:-------------------------:|:-------------------------:|
 |<img width="450" alt="screen" src="assets/raw.jpg"> | <img width="450" alt="screen" src="assets/deid.jpg"> |
 
