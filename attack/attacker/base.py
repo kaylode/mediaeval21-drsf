@@ -1,11 +1,11 @@
-from .algorithms import get_optim
-
 import torch
 from torchvision.transforms import functional as TFF
 
+from attack.algorithms import get_optim
+
 class Attacker:
     """
-    Attacker class
+    Abstract class for Attacker
     :params:
         optim: name of attack algorithm
         n_iter: number of iterations
@@ -15,44 +15,26 @@ class Attacker:
         self.n_iter = n_iter
         self.eps = eps
         self.optim = optim
-
-    def _generate_deid(self, cv2_image, face_box, deid_fn):
+    
+    def _generate_adv(self, query_image):
         """
-        Generate deid image
+        Generate adversarial image
         :params:
-            cv2_image: cv2 image
-            face_box: bounding box of face in the image. In (x1,y1,x2,y2) format
-            deid_fn: De-identification method
-        :return: deid cv2 image
+            query_image: cv2 image
+        :return: adversarial cv2 image
         """
-        deid = deid_fn(cv2_image, face_box)
-        return deid
+        raise NotImplementedError("This is an interface method")
 
-    def _generate_targets(self, victim, cv2_image):
+    def _generate_targets(self, victim, query_image):
         """
         Generate target for image using victim model
         :params:
-            cv2_image: cv2 image
+            query_image: cv2 image
             victim: victim detection model
         :return: 
-            face_box: bounding box of face in the image. In (x1,y1,x2,y2) format
             targets: targets for image
         """
-
-        # Normalize image
-        query = victim.preprocess(cv2_image)
-
-        # To tensor, allow gradients to be saved
-        query_tensor = TFF.to_tensor(query).contiguous()
-
-        # Detect on raw image
-        predictions = victim.detect(query_tensor)
-
-        # Make targets and face_box
-        targets = victim.make_targets(predictions, cv2_image)
-        face_box = victim.get_face_box(predictions)
-
-        return face_box, targets
+        raise NotImplementedError("This is an interface method")
 
     def _iterative_attack(self, att_img, targets, model, optim, n_iter, mask=None):
         """
@@ -73,42 +55,43 @@ class Attacker:
             with torch.set_grad_enabled(True):
                 loss = model(att_img, targets)
             loss.backward()
-            # att_img.grad[mask] = 0
+
+            if mask is not None:
+                att_img.grad[mask] = 0
+
             optim.step()
 
         results = att_img.clone()
         return results
 
-    def attack(self, victim, cv2_image, deid_fn, face_box=None, targets=None, **kwargs):
+    def attack(self, victim, query_image, targets=None, optim_params={}):
         """
         Performs attack flow on image
         :params:
-            cv2_image: raw cv2 image
+            query_image: raw cv2 image
             victim: victim detection model
-            deid_fn: De-identification method
-            face_box: optimizer
             targets: targets for image
             kwargs: keyword arguments that will be passed to optim
         :return: 
             adv_res: adversarial cv2 image
         """
         # Generate target
-        if face_box is None and targets is None:
-            face_box, targets = self._generate_targets(victim, cv2_image)
+        if targets is None:
+            targets = self._generate_targets(victim, query_image)
         
-        # De-id image with face box
-        deid = self._generate_deid(cv2_image, face_box, deid_fn)
-        deid_norm = victim.preprocess(deid) 
+        # Generate adverasarial
+        adv_img = self._generate_adv(query_image)
+        adv_norm = victim.preprocess(adv_img) 
 
         # To tensor, allow gradients to be saved
-        deid_tensor = TFF.to_tensor(deid_norm).contiguous()
+        adv_tensor = TFF.to_tensor(adv_norm).contiguous()
         
         # Get attack algorithm
-        optim = get_optim(self.optim, params=[deid_tensor], epsilon=self.eps, **kwargs)
+        optim = get_optim(self.optim, params=[adv_tensor], epsilon=self.eps, **optim_params)
 
         # Adversarial attack
-        deid_tensor.requires_grad = True
-        adv_res = self._iterative_attack(deid_tensor, targets, victim, optim, self.n_iter)
+        adv_tensor.requires_grad = True
+        adv_res = self._iterative_attack(adv_tensor, targets, victim, optim, self.n_iter)
 
         # Postprocess, return cv2 image
         adv_res = victim.postprocess(adv_res)
