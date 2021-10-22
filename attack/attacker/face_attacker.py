@@ -62,7 +62,7 @@ class FaceAttacker(Attacker):
             deid_fn: De-identification method
             face_box: optimizer
             targets: targets for image
-            kwargs: keyword arguments that will be passed to optim
+            optim_params: keyword arguments that will be passed to optim
         :return: 
             adv_res: adversarial cv2 image
         """

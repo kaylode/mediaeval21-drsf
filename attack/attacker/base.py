@@ -71,7 +71,7 @@ class Attacker:
             query_image: raw cv2 image
             victim: victim detection model
             targets: targets for image
-            kwargs: keyword arguments that will be passed to optim
+            optim_params: keyword arguments that will be passed to optim
         :return: 
             adv_res: adversarial cv2 image
         """
