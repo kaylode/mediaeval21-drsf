@@ -1,22 +1,21 @@
-from .algorithms import get_optim
-
 import torch
 from torchvision.transforms import functional as TFF
 
-class Attacker:
+from attack.algorithms import get_optim
+from .base import Attacker
+
+class FaceAttacker(Attacker):
     """
-    Attacker class
+    Face model Attacker class
     :params:
         optim: name of attack algorithm
         n_iter: number of iterations
         eps: epsilon param
     """
     def __init__(self, optim, n_iter=10, eps=8/255.):
-        self.n_iter = n_iter
-        self.eps = eps
-        self.optim = optim
+        super().__init__(optim, n_iter, eps)
 
-    def _generate_deid(self, cv2_image, face_box, deid_fn):
+    def _generate_adv(self, cv2_image, face_box, deid_fn):
         """
         Generate deid image
         :params:
@@ -54,32 +53,7 @@ class Attacker:
 
         return face_box, targets
 
-    def _iterative_attack(self, att_img, targets, model, optim, n_iter, mask=None):
-        """
-        Performs iterative adversarial attack on image
-        :params:
-            att_img: input attack image
-            targets: attack targets
-            model: victim detection model
-            optim: optimizer
-            n_iter: number of attack iterations
-            mask: gradient mask
-        :return: 
-            results: tensor image with updated gradients
-        """
-
-        for _ in range(n_iter):
-            optim.zero_grad()
-            with torch.set_grad_enabled(True):
-                loss = model(att_img, targets)
-            loss.backward()
-            # att_img.grad[mask] = 0
-            optim.step()
-
-        results = att_img.clone()
-        return results
-
-    def attack(self, victim, cv2_image, deid_fn, face_box=None, targets=None, **kwargs):
+    def attack(self, victim, cv2_image, deid_fn, face_box=None, targets=None, optim_params={}):
         """
         Performs attack flow on image
         :params:
@@ -88,7 +62,7 @@ class Attacker:
             deid_fn: De-identification method
             face_box: optimizer
             targets: targets for image
-            kwargs: keyword arguments that will be passed to optim
+            optim_params: keyword arguments that will be passed to optim
         :return: 
             adv_res: adversarial cv2 image
         """
@@ -97,14 +71,14 @@ class Attacker:
             face_box, targets = self._generate_targets(victim, cv2_image)
         
         # De-id image with face box
-        deid = self._generate_deid(cv2_image, face_box, deid_fn)
+        deid = self._generate_adv(cv2_image, face_box, deid_fn)
         deid_norm = victim.preprocess(deid) 
 
         # To tensor, allow gradients to be saved
         deid_tensor = TFF.to_tensor(deid_norm).contiguous()
         
         # Get attack algorithm
-        optim = get_optim(self.optim, params=[deid_tensor], epsilon=self.eps, **kwargs)
+        optim = get_optim(self.optim, params=[deid_tensor], epsilon=self.eps, **optim_params)
 
         # Adversarial attack
         deid_tensor.requires_grad = True
