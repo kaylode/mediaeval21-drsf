@@ -1,8 +1,7 @@
 from typing import List
 
 import dlib
-import face_alignment
-import face_alignment.detection.sfd
+from models.face_align import face_alignment
 import mediapipe
 import numpy as np
 from omegaconf import DictConfig

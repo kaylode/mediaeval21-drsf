@@ -133,7 +133,7 @@ class Demo:
         if ext == 'mp4':
             fourcc = cv2.VideoWriter_fourcc(*'H264')
         elif ext == 'avi':
-            fourcc = cv2.VideoWriter_fourcc(*'PIM1')
+            fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
         else:
             raise ValueError
         if self.config.demo.use_camera:
