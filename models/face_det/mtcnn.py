@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image
 
 from .base import BaseDetector
-from .face_det.facenet import MTCNN
+from .models.facenet import MTCNN
 
 def fixed_image_standardization(image_tensor):
     processed_tensor = (image_tensor - 127.5) / 128.0

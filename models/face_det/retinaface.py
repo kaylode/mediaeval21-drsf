@@ -9,9 +9,9 @@ import numpy as np
 from PIL import Image
 
 from .base import BaseDetector
-from .face_det.retinaface.models.retinaface import retinaface_mnet
-from .face_det.retinaface.layers.modules.multibox_loss import MultiBoxLoss
-from .face_det.retinaface.layers.functions.prior_box import PriorBox
+from .models.retinaface.models.retinaface import retinaface_mnet
+from .models.retinaface.layers.modules.multibox_loss import MultiBoxLoss
+from .models.retinaface.layers.functions.prior_box import PriorBox
 
 class DetectionLoss(nn.Module):
     def __init__(self, cfg, image_size):
