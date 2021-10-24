@@ -163,4 +163,5 @@ def main():
 if __name__ == "__main__":
     main()
 
-# python gaze.py --mode eth-xgaze --o . --no-screen  --video assets/T002_ActionsShorter_mini_8829_9061_Talk-non-cell.mp4
+# python gaze.py --mode eth-xgaze --o . --no-screen --face-detector dlib --video assets/T002_ActionsShorter_mini_8829_9061_Talk-non-cell.mp4
+# python gaze.py --mode mpiigaze --o . --no-screen --face-detector face_alignment_dlib --video assets/T002_ActionsShorter_mini_8829_9061_Talk-non-cell.mp4
