@@ -50,7 +50,7 @@ models_urls = {
 
 class FaceAlignment:
     def __init__(self, landmarks_type, network_size=NetworkSize.LARGE,
-                 device='cuda', flip_input=False, face_detector='sfd', face_detector_kwargs=None, verbose=False):
+                 device='cuda', flip_input=False, verbose=False):
         self.device = device
         self.flip_input = flip_input
         self.landmarks_type = landmarks_type
@@ -69,12 +69,6 @@ class FaceAlignment:
 
         if 'cuda' in device:
             torch.backends.cudnn.benchmark = True
-
-        # Get the face detector
-        face_detector_module = __import__('face_alignment.detection.' + face_detector,
-                                          globals(), locals(), [face_detector], 0)
-        face_detector_kwargs = face_detector_kwargs or {}
-        self.face_detector = face_detector_module.FaceDetector(device=device, verbose=verbose, **face_detector_kwargs)
 
         # Initialise the face alignemnt networks
         if landmarks_type == LandmarksType._2D:
@@ -95,7 +89,7 @@ class FaceAlignment:
             self.depth_prediciton_net.to(device)
             self.depth_prediciton_net.eval()
 
-    def get_landmarks(self, image_or_path, detected_faces=None, return_bboxes=False, return_landmark_score=False):
+    def get_landmarks(self, image_or_path, detected_faces, return_bboxes=False, return_landmark_score=False):
         """Deprecated, please use get_landmarks_from_image
 
         Arguments:
@@ -110,7 +104,7 @@ class FaceAlignment:
         return self.get_landmarks_from_image(image_or_path, detected_faces, return_bboxes, return_landmark_score)
 
     @torch.no_grad()
-    def get_landmarks_from_image(self, image_or_path, detected_faces=None, return_bboxes=False,
+    def get_landmarks_from_image(self, image_or_path, detected_faces, return_bboxes=False,
                                  return_landmark_score=False):
         """Predict the landmarks for each face present in the image.
 
@@ -137,9 +131,6 @@ class FaceAlignment:
         """
         image = get_image(image_or_path)
 
-        if detected_faces is None:
-            detected_faces = self.face_detector.detect_from_image(image.copy())
-
         if len(detected_faces) == 0:
             warnings.warn("No faces were detected.")
             if return_bboxes or return_landmark_score:
@@ -153,7 +144,7 @@ class FaceAlignment:
             center = torch.tensor(
                 [d[2] - (d[2] - d[0]) / 2.0, d[3] - (d[3] - d[1]) / 2.0])
             center[1] = center[1] - (d[3] - d[1]) * 0.12
-            scale = (d[2] - d[0] + d[3] - d[1]) / self.face_detector.reference_scale
+            scale = (d[2] - d[0] + d[3] - d[1]) / 195 # 195 is dlib reference scale
 
             inp = crop(image, center, scale)
             inp = torch.from_numpy(inp.transpose(
@@ -200,7 +191,7 @@ class FaceAlignment:
             return landmarks
 
     @torch.no_grad()
-    def get_landmarks_from_batch(self, image_batch, detected_faces=None, return_bboxes=False,
+    def get_landmarks_from_batch(self, image_batch, detected_faces, return_bboxes=False,
                                  return_landmark_score=False):
         """Predict the landmarks for each face present in the image.
 
@@ -225,9 +216,6 @@ class FaceAlignment:
                     (landmark, None,           detected_face)
                     (landmark, landmark_score, None         )
         """
-
-        if detected_faces is None:
-            detected_faces = self.face_detector.detect_from_batch(image_batch)
 
         if len(detected_faces) == 0:
             warnings.warn("No faces were detected.")
@@ -265,33 +253,3 @@ class FaceAlignment:
             return landmarks, landmarks_scores_list, detected_faces
         else:
             return landmarks
-
-    def get_landmarks_from_directory(self, path, extensions=['.jpg', '.png'], recursive=True, show_progress_bar=True,
-                                     return_bboxes=False, return_landmark_score=False):
-        """Scan a directory for images with a given extension type(s) and predict the landmarks for each
-            face present in the images found.
-
-         Arguments:
-            path {str} -- path to the target directory containing the images
-
-        Keyword Arguments:
-            extensions {list of str} -- list containing the image extensions considered (default: ['.jpg', '.png'])
-            recursive {boolean} -- If True, scans for images recursively (default: True)
-            show_progress_bar {boolean} -- If True displays a progress bar (default: True)
-            return_bboxes {boolean} -- If True, return the face bounding boxes in addition to the keypoints.
-            return_landmark_score {boolean} -- If True, return the keypoint scores along with the keypoints.
-        """
-        detected_faces = self.face_detector.detect_from_directory(path, extensions, recursive, show_progress_bar)
-
-        predictions = {}
-        for image_path, bounding_boxes in detected_faces.items():
-            image = io.imread(image_path)
-            if return_bboxes or return_landmark_score:
-                preds, bbox, score = self.get_landmarks_from_image(
-                    image, bounding_boxes, return_bboxes=return_bboxes, return_landmark_score=return_landmark_score)
-                predictions[image_path] = (preds, bbox, score)
-            else:
-                preds = self.get_landmarks_from_image(image, bounding_boxes)
-                predictions[image_path] = preds
-
-        return predictions
