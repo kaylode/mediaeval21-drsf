@@ -34,6 +34,7 @@ from models.face_align.fan import FANAlignment
 from attack.attacker import LandmarkAttacker
 from attack.deid import Pixelate
 
+face_box = [186, 194, 320, 375]
 attacker = LandmarkAttacker(optim='RMSprop')   # Use RMSprop method
 x_adv = attacker.attack(
     cv2_image = cv2_image,            # query image
