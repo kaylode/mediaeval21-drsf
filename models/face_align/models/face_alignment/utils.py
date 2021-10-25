@@ -105,7 +105,7 @@ def transform(point, center, scale, resolution, invert=False):
     return new_point.int()
 
 
-def crop(image, center, scale, resolution=256.0):
+def crop(image, center, scale, resolution=256.0, return_points=False):
     """Center crops an image or set of heatmaps
 
     Arguments:
@@ -144,7 +144,11 @@ def crop(image, center, scale, resolution=256.0):
     old_shape = newImg.shape
     newImg = cv2.resize(newImg, dsize=(int(resolution), int(resolution)),
                         interpolation=cv2.INTER_LINEAR)
-    return newImg, (oldX[0], oldY[0], oldX[1], oldY[1]), (newX[0], newY[0], newX[1], newY[1]), (old_shape[1], old_shape[0])
+
+    if return_points:
+        return newImg, (oldX[0], oldY[0], oldX[1], oldY[1]), (newX[0], newY[0], newX[1], newY[1]), (old_shape[1], old_shape[0])
+    else:
+        return newImg
 
 def crop_mapping(ori_image, crop_image, old_box, new_box, old_width, old_height):
     ori_crop_image = cv2.resize(crop_image, dsize=(int(old_width), int(old_height)),

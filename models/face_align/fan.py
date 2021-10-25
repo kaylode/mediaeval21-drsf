@@ -21,7 +21,7 @@ class FANAlignment(BaseAlignment):
         else:
             raise ValueError('Loss function does not exist')
 
-        self.lm_estimator = FaceAlignment(
+        self.model = FaceAlignment(
             LandmarksType._2D,
             flip_input=False,
             device= 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -36,12 +36,15 @@ class FANAlignment(BaseAlignment):
 
     def preprocess(self, cv2_image, center, scale):
         # RGB Image
-        cropped, new_box, old_box, old_shape = crop(cv2_image, center, scale)
+        cropped, old_box, new_box, old_shape = crop(cv2_image, center, scale, return_points=True)
         inputs = torch.from_numpy(cropped.transpose((2, 0, 1))).float()
         inputs.div_(255.0).unsqueeze_(0)
         return inputs, new_box, old_box, old_shape
 
-    def postprocess(self, ori_image, crop_image, old_box, new_box, old_width, old_height):
+    def postprocess(self, ori_image, crop_image, old_box, new_box, old_shape):
+        old_width, old_height = old_shape
+        crop_image = crop_image.detach().numpy().squeeze().transpose((1,2,0))
+        crop_image = (crop_image*255).astype(np.uint8)
         cv2_image = crop_mapping(ori_image, crop_image, old_box, new_box, old_width, old_height)
         return cv2_image
 
@@ -55,10 +58,10 @@ class FANAlignment(BaseAlignment):
         with torch.no_grad():
             heatmaps = self.model.forward(x) 
         heatmaps = heatmaps.detach().cpu().numpy()
-        _, landmarks, _ = get_preds_fromhm(heatmaps, center.numpy(), scale) 
-        landmarks = torch.from_numpy(heatmaps).view(68, 2) # 68 keypoints
+        _, preds, _ = get_preds_fromhm(heatmaps, center.numpy(), scale) 
+        landmarks = torch.from_numpy(preds).view(68, 2) # 68 keypoints
 
         return heatmaps, landmarks
 
     def make_targets(self, predictions):
-        return predictions[0]
+        return torch.from_numpy(predictions[0])
