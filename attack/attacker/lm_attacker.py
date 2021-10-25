@@ -78,8 +78,7 @@ class LandmarkAttacker(Attacker):
         if not isinstance(deid_norm, torch.Tensor):
             deid_tensor = TFF.to_tensor(deid_norm).contiguous()
         else:
-            deid_tensor = deid_norm.clone()
-            deid_norm.requires_grad = True
+            deid_tensor = deid_norm.clone()   
         
         # Get attack algorithm
         optim = get_optim(self.optim, params=[deid_tensor], epsilon=self.eps, **optim_params)
