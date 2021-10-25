@@ -1,4 +1,4 @@
-﻿﻿# Driving Road Safety Forward: Video Data Privacy
+# Driving Road Safety Forward: Video Data Privacy
 
 ## Example use cases
 ### Non-targeted attack
