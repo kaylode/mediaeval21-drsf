@@ -84,7 +84,10 @@ class Attacker:
         adv_norm = victim.preprocess(adv_img) 
 
         # To tensor, allow gradients to be saved
-        adv_tensor = TFF.to_tensor(adv_norm).contiguous()
+        if not isinstance(adv_norm, torch.Tensor):
+            adv_tensor = TFF.to_tensor(adv_norm).contiguous()
+        else:
+            adv_tensor = adv_norm.clone()   
         
         # Get attack algorithm
         optim = get_optim(self.optim, params=[adv_tensor], epsilon=self.eps, **optim_params)

@@ -4,7 +4,7 @@ from torchvision.transforms import functional as TFF
 from attack.algorithms import get_optim
 from .base import Attacker
 
-class FaceAttacker(Attacker):
+class LandmarkAttacker(Attacker):
     """
     Face model Attacker class
     :params:
@@ -27,7 +27,7 @@ class FaceAttacker(Attacker):
         deid = deid_fn(cv2_image, face_box)
         return deid
 
-    def _generate_targets(self, victim, cv2_image):
+    def _generate_targets(self, victim, cv2_image, center, scale):
         """
         Generate target for image using victim model
         :params:
@@ -39,21 +39,17 @@ class FaceAttacker(Attacker):
         """
 
         # Normalize image
-        query = victim.preprocess(cv2_image)
-
-        # To tensor, allow gradients to be saved
-        query_tensor = TFF.to_tensor(query).contiguous()
+        query, _, _, _ = victim.preprocess(cv2_image, center, scale)
 
         # Detect on raw image
-        predictions = victim.detect(query_tensor)
+        predictions = victim.detect(query, center, scale)
 
         # Make targets and face_box
-        targets = victim.make_targets(predictions, cv2_image)
-        face_box = victim.get_face_box(predictions)
+        targets = victim.make_targets(predictions)
 
-        return face_box, targets
+        return targets
 
-    def attack(self, victim, cv2_image, deid_fn, face_box=None, targets=None, optim_params={}):
+    def attack(self, victim, cv2_image, deid_fn, face_box, targets=None, optim_params={}):
         """
         Performs attack flow on image
         :params:
@@ -66,13 +62,17 @@ class FaceAttacker(Attacker):
         :return: 
             adv_res: adversarial cv2 image
         """
+
+        # Get center and scale for preprocess
+        center, scale = victim._get_scale_and_center(face_box)
+
         # Generate target
-        if face_box is None and targets is None:
-            face_box, targets = self._generate_targets(victim, cv2_image)
+        if targets is None:
+            targets = self._generate_targets(victim, cv2_image, center, scale)
         
         # De-id image with face box
         deid = self._generate_adv(cv2_image, face_box, deid_fn)
-        deid_norm = victim.preprocess(deid) 
+        deid_norm, new_box, old_box, old_shape = victim.preprocess(deid, center, scale) 
 
         # To tensor, allow gradients to be saved
         if not isinstance(deid_norm, torch.Tensor):
@@ -88,5 +88,8 @@ class FaceAttacker(Attacker):
         adv_res = self._iterative_attack(deid_tensor, targets, victim, optim, self.n_iter)
 
         # Postprocess, return cv2 image
-        adv_res = victim.postprocess(adv_res)
+        adv_res = victim.postprocess(
+            cv2_image, adv_res, 
+            old_box, new_box, old_shape)
+
         return adv_res
