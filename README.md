@@ -15,7 +15,7 @@ cv2_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
 attacker = FaceAttacker(optim='RMSprop')   # Use RMSprop method
 x_adv = attacker.attack(
     cv2_image = cv2_image,            # query image
-    detector = MTCNNDetector(),       # attack mtcnn
+    victim = MTCNNDetector(),       # attack mtcnn
     deid_fn = Pixelate(10),           # use pixelate method
     optim_params = {
         "min_value": -1               # mtcnn requires
@@ -38,7 +38,8 @@ face_box = [186, 194, 320, 375]
 attacker = LandmarkAttacker(optim='RMSprop')   # Use RMSprop method
 x_adv = attacker.attack(
     cv2_image = cv2_image,            # query image
-    detector = FANAlignment(),       # attack mtcnn
+    victim = FANAlignment(),       # attack mtcnn
+    face_box = face_box,
     deid_fn = Pixelate(10))           # use pixelate method
 
 plt.imshow(x_adv)
@@ -65,7 +66,7 @@ face_box = [182, 64, 309, 243]
 attacker = FaceAttacker(optim='I-FGSM')   # Use IFGSM method
 x_adv = attacker.attack(
     cv2_image = cv2_image,            # query image
-    detector = RetinaFaceDetector(),  # attack retinaface
+    victim = RetinaFaceDetector(),  # attack retinaface
     deid_fn = Pixelate(10),           # use pixelate method
     face_box = face_box,            
     targets = targets)
