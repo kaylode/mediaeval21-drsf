@@ -140,9 +140,25 @@ def crop(image, center, scale, resolution=256.0):
     oldY = np.array([max(1, ul[1] + 1), min(br[1], ht)], dtype=np.int32)
     newImg[newY[0] - 1:newY[1], newX[0] - 1:newX[1]
            ] = image[oldY[0] - 1:oldY[1], oldX[0] - 1:oldX[1], :]
+    
+    old_shape = newImg.shape
     newImg = cv2.resize(newImg, dsize=(int(resolution), int(resolution)),
                         interpolation=cv2.INTER_LINEAR)
-    return newImg
+    return newImg, (oldX[0], oldY[0], oldX[1], oldY[1]), (newX[0], newY[0], newX[1], newY[1]), (old_shape[1], old_shape[0])
+
+def crop_mapping(ori_image, crop_image, old_box, new_box, old_width, old_height):
+    ori_crop_image = cv2.resize(crop_image, dsize=(int(old_width), int(old_height)),
+                        interpolation=cv2.INTER_LINEAR)
+    
+    newX = (new_box[0], new_box[2])
+    newY = (new_box[1], new_box[3])
+    oldX = (old_box[0], old_box[2])
+    oldY = (old_box[1], old_box[3])
+    new_image = ori_image.copy()
+    
+    new_image[oldY[0] - 1:oldY[1], oldX[0] - 1:oldX[1], :] = ori_crop_image[newY[0] - 1:newY[1], newX[0] - 1:newX[1]] 
+
+    return new_image
 
 
 @jit(nopython=True)

@@ -1,7 +1,6 @@
 import torch
 import warnings
 from enum import IntEnum
-from skimage import io
 import numpy as np
 from distutils.version import LooseVersion
 
@@ -88,6 +87,16 @@ class FaceAlignment:
 
             self.depth_prediciton_net.to(device)
             self.depth_prediciton_net.eval()
+
+    def forward(self, inputs):
+        """
+        Forward image and compute gradients
+        """
+        
+        inputs = inputs.to(self.device)
+        out = self.face_alignment_net(inputs)
+        return out
+
 
     def get_landmarks(self, image_or_path, detected_faces, return_bboxes=False, return_landmark_score=False):
         """Deprecated, please use get_landmarks_from_image

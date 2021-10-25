@@ -6,11 +6,9 @@ import torch
 import torch.nn as nn
 
 import numpy as np
-from PIL import Image
 
 from .base import BaseAlignment
-from .models.face_alignment import FaceAlignment, LandmarksType
-
+from .models.face_alignment import FaceAlignment, LandmarksType, crop, crop_mapping, get_preds_fromhm
 
 class FANAlignment(BaseAlignment):
     def __init__(self, loss_fn='l2'):
@@ -23,44 +21,44 @@ class FANAlignment(BaseAlignment):
         else:
             raise ValueError('Loss function does not exist')
 
-        self.model = FaceAlignment(
+        self.lm_estimator = FaceAlignment(
             LandmarksType._2D,
-            face_detector='dlib',
             flip_input=False,
             device= 'cuda:0' if torch.cuda.is_available() else 'cpu'
         )
 
-    def preprocess(self, cv2_image):
+    def _get_scale_and_center(self, face_box):
+        center = torch.tensor(
+            [face_box[2] - (face_box[2] - face_box[0]) / 2.0, face_box[3] - (face_box[3] - face_box[1]) / 2.0])
+        center[1] = center[1] - (face_box[3] - face_box[1]) * 0.12
+        scale = (face_box[2] - face_box[0] + face_box[3] - face_box[1]) / 195 # 195 is dlib reference scale
+        return center, scale
+
+    def preprocess(self, cv2_image, center, scale):
         # RGB Image
+        cropped, new_box, old_box, old_shape = crop(cv2_image, center, scale)
+        inputs = torch.from_numpy(cropped.transpose((2, 0, 1))).float()
+        inputs.div_(255.0).unsqueeze_(0)
+        return inputs, new_box, old_box, old_shape
+
+    def postprocess(self, ori_image, crop_image, old_box, new_box, old_width, old_height):
+        cv2_image = crop_mapping(ori_image, crop_image, old_box, new_box, old_width, old_height)
         return cv2_image
 
-    def postprocess(self, image):
-        return image
-
-    def forward(self, imgs, target_bboxes):
-        n = target_bboxes.shape[0]
-        if n != 1:
-            raise ValueError('Currently only batch size 1 is supported.')
-        adv_det, adv_points = self.model.forward(imgs)
-        # faces = model.extract(image, boxes, save_path=None)
-        adv_scores = adv_det[:, -1]
-        adv_bboxes = adv_det[:, :-1]
-
-        num_preds = adv_bboxes.shape[0]
-        target_bboxes = target_bboxes.repeat(num_preds, 1)
-
+    def forward(self, imgs, targets):
+        preds = self.model.forward(imgs)
         # Regression loss
-        loss = self.loss_fn(adv_bboxes, target_bboxes)
+        loss = self.loss_fn(preds, targets)
         return loss
 
-    def detect(self, x, face_box):
-        x_tensor = x.clone()
-        if len(x_tensor.shape) == 3:
-            x_tensor = x_tensor.unsqueeze(0)
-
+    def detect(self, x, center, scale):
         with torch.no_grad():
-            _landmarks = self.model.get_landmarks(x_tensor, detected_faces=[face_box]) # 68 points
-        return _landmarks
+            heatmaps = self.model.forward(x) 
+        heatmaps = heatmaps.detach().cpu().numpy()
+        _, landmarks, _ = get_preds_fromhm(heatmaps, center.numpy(), scale) 
+        landmarks = torch.from_numpy(heatmaps).view(68, 2) # 68 keypoints
 
-    def make_targets(self, predictions, image):
-        return torch.from_numpy(predictions).cuda()
+        return heatmaps, landmarks
+
+    def make_targets(self, predictions):
+        return predictions[0]
