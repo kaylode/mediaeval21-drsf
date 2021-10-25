@@ -1,9 +1,11 @@
-﻿# Driving Road Safety Forward: Video Data Privacy
+﻿﻿# Driving Road Safety Forward: Video Data Privacy
 
 ## Example use cases
 ### Non-targeted attack
+
+- Face Detection
 ```python
-from models.retinaface import MTCNNDetector
+from models.face_det.retinaface import MTCNNDetector
 from attack.attacker import FaceAttacker
 from attack.deid import Pixelate
 
@@ -26,9 +28,28 @@ plt.imshow(x_adv)
 |:-------------------------:|:-------------------------:|
 |<img width="450" alt="screen" src="assets/test_images/paul_rudd/1.jpg"> | <img width="450" alt="screen" src="assets/deid2.jpg"> |
 
+- Face Landmarks Estimation
+```python
+from models.face_align.fan import FANAlignment
+from attack.attacker import LandmarkAttacker
+from attack.deid import Pixelate
+
+attacker = LandmarkAttacker(optim='RMSprop')   # Use RMSprop method
+x_adv = attacker.attack(
+    cv2_image = cv2_image,            # query image
+    detector = FANAlignment(),       # attack mtcnn
+    deid_fn = Pixelate(10))           # use pixelate method
+
+plt.imshow(x_adv)
+```
+
+| Input image | Model prediction after deid + attack |
+|:-------------------------:|:-------------------------:|
+|<img width="450" alt="screen" src="assets/lmraw.jpg"> | <img width="450" alt="screen" src="assets/lmdeid.jpg"> |
+
 ### Targeted attack
 ```python
-from models.retinaface import RetinaFaceDetector
+from models.face_det.retinaface import RetinaFaceDetector
 from attack.attacker import FaceAttacker
 from attack.deid import Pixelate
 
