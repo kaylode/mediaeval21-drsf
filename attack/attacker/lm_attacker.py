@@ -75,7 +75,11 @@ class LandmarkAttacker(Attacker):
         deid_norm, new_box, old_box, old_shape = victim.preprocess(deid, center, scale) 
 
         # To tensor, allow gradients to be saved
-        deid_tensor = TFF.to_tensor(deid_norm).contiguous()
+        if not isinstance(deid_norm, torch.Tensor):
+            deid_tensor = TFF.to_tensor(deid_norm).contiguous()
+        else:
+            deid_tensor = deid_norm.clone()
+            deid_norm.requires_grad = True
         
         # Get attack algorithm
         optim = get_optim(self.optim, params=[deid_tensor], epsilon=self.eps, **optim_params)
