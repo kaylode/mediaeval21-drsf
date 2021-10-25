@@ -82,6 +82,8 @@ plt.imshow(x_adv)
 
 ## Code References
 - https://github.com/timesler/facenet-pytorch
+- https://github.com/1adrianb/face-alignment
+- https://github.com/hysts/pytorch_mpiigaze
 - https://github.com/git-disl/TOG
 - https://github.com/honguyenhaituan/PrivacyPreservingFaceRecognition
 
