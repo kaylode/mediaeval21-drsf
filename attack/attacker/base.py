@@ -3,6 +3,25 @@ from torchvision.transforms import functional as TFF
 
 from attack.algorithms import get_optim
 
+
+def generate_tensors(query):
+    """
+    Generate tensors to allow computing gradients
+    :params:
+        query: list of cv2 image
+    :return: torch tensors of images
+    """
+    if len(query.shape)==3:
+        query = [query]
+
+    if isinstance(query[0], torch.Tensor):
+        torch_images = query
+    else:
+        torch_images = [
+            TFF.to_tensor(i) if query.shape[-1] == 3 else torch.from_numpy(i) for i in query]
+
+    return torch.stack(torch_images, dim=0).contiguous()
+
 class Attacker:
     """
     Abstract class for Attacker
@@ -23,16 +42,7 @@ class Attacker:
             query: list of cv2 image
         :return: torch tensors of images
         """
-        if len(query.shape)==3:
-            query = [query]
-
-        if isinstance(query[0], torch.Tensor):
-            torch_images = query
-        else:
-            torch_images = [
-              TFF.to_tensor(i) if query.shape[-1] == 3 else torch.from_numpy(i) for i in query]
-
-        return torch.stack(torch_images, dim=0).contiguous()
+        return generate_tensors(query)
 
     def _generate_adv(self, images):
         """
