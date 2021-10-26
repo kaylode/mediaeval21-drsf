@@ -56,7 +56,7 @@ class LandmarkAttacker(Attacker):
             cv2_image: raw cv2 image
             victim: victim detection model
             deid_fn: De-identification method
-            face_box: optimizer
+            face_box: box of face
             targets: targets for image
             optim_params: keyword arguments that will be passed to optim
         :return: 

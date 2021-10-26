@@ -15,23 +15,34 @@ class FaceAttacker(Attacker):
     def __init__(self, optim, n_iter=10, eps=8/255.):
         super().__init__(optim, n_iter, eps)
 
-    def _generate_adv(self, cv2_image, face_box, deid_fn):
+    def _generate_tensors(self, query):
+        if not isinstance(query, list):
+            query = [query]
+
+        if isinstance(query[0], torch.Tensor):
+            torch_images = query
+        else:
+            torch_images = [TFF.to_tensor(i) for i in query]
+
+        return torch.stack(torch_images, dim=0).contiguous()
+
+    def _generate_adv(self, images, face_boxes, deid_fn):
         """
         Generate deid image
         :params:
-            cv2_image: cv2 image
-            face_box: bounding box of face in the image. In (x1,y1,x2,y2) format
+            images: list of cv2 image
+            face_boxes: bounding boxes of face in the image. In (x1,y1,x2,y2) format
             deid_fn: De-identification method
         :return: deid cv2 image
         """
-        deid = deid_fn(cv2_image, face_box)
+        deid = deid_fn.forward_batch(images, face_boxes)
         return deid
 
-    def _generate_targets(self, victim, cv2_image):
+    def _generate_targets(self, victim, images):
         """
         Generate target for image using victim model
         :params:
-            cv2_image: cv2 image
+            images: list of cv2 image
             victim: victim detection model
         :return: 
             face_box: bounding box of face in the image. In (x1,y1,x2,y2) format
@@ -39,46 +50,47 @@ class FaceAttacker(Attacker):
         """
 
         # Normalize image
-        query = victim.preprocess(cv2_image)
+        query = victim.preprocess(images)
 
         # To tensor, allow gradients to be saved
-        query_tensor = TFF.to_tensor(query).contiguous()
+        query_tensor = self._generate_tensors(query)
 
         # Detect on raw image
         predictions = victim.detect(query_tensor)
 
         # Make targets and face_box
-        targets = victim.make_targets(predictions, cv2_image)
-        face_box = victim.get_face_box(predictions)
+        targets = victim.make_targets(predictions, images)
+        face_boxes = victim.get_face_boxes(predictions)
 
-        return face_box, targets
+        return face_boxes, targets
 
-    def attack(self, victim, cv2_image, deid_fn, face_box=None, targets=None, optim_params={}):
+    def attack(self, victim, images, deid_fn, face_boxes=None, targets=None, optim_params={}):
         """
         Performs attack flow on image
         :params:
-            cv2_image: raw cv2 image
+            images: list of cv2 images
             victim: victim detection model
             deid_fn: De-identification method
-            face_box: optimizer
+            face_boxes: boxes of faces
             targets: targets for image
             optim_params: keyword arguments that will be passed to optim
         :return: 
             adv_res: adversarial cv2 image
         """
         # Generate target
-        if face_box is None and targets is None:
-            face_box, targets = self._generate_targets(victim, cv2_image)
+        if face_boxes is None and targets is None:
+            face_boxes, targets = self._generate_targets(victim, images)
         
         # De-id image with face box
-        deid = self._generate_adv(cv2_image, face_box, deid_fn)
+        deid = self._generate_adv(images, face_boxes, deid_fn)
         deid_norm = victim.preprocess(deid) 
 
         # To tensor, allow gradients to be saved
-        if not isinstance(deid_norm, torch.Tensor):
-            deid_tensor = TFF.to_tensor(deid_norm).contiguous()
-        else:
-            deid_tensor = deid_norm.clone()   
+        # if not isinstance(deid_norm, torch.Tensor):
+        #     deid_tensor = TFF.to_tensor(deid_norm).contiguous()
+        # else:
+        #     deid_tensor = deid_norm.clone()   
+        deid_tensor = self._generate_tensors(deid_norm)
         
         # Get attack algorithm
         optim = get_optim(self.optim, params=[deid_tensor], epsilon=self.eps, **optim_params)

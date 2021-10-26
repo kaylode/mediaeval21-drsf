@@ -35,11 +35,12 @@ class RetinaFaceDetector(BaseDetector):
         self.model = retinaface_mnet(pretrained=True)
         self.model.eval()
         self.config = self.model.cfg
-    
-    def preprocess(self, cv2_image):
-        pil_image = Image.fromarray(cv2_image)
-        np_image = np.uint8(pil_image)
-        return np_image
+
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.model = self.model.to(self.device)
+
+    def preprocess(self, images):
+        return images
 
     def postprocess(self, image):
         image = image.detach().numpy().squeeze().transpose((1,2,0))
@@ -51,8 +52,8 @@ class RetinaFaceDetector(BaseDetector):
         
         if len(imgs.shape) == 3:
             imgs = imgs.unsqueeze(0)
+        imgs = imgs.to(self.device)
         predictions = self.model.forward(imgs)
-
         # Multibox loss
         loss = loss_fn(predictions, target_bboxes) 
         return loss
@@ -61,33 +62,40 @@ class RetinaFaceDetector(BaseDetector):
         x_tensor = x.clone()
         if len(x_tensor.shape) == 3:
             x_tensor = x_tensor.unsqueeze(0)
+        x_tensor = x_tensor.to(self.device)
 
         with torch.no_grad():
             results = self.model.detect(x_tensor) # xmin, ymin, xmax, ymax, scores
         return results
 
-    def make_targets(self, predictions, image):
-        width, height = image.shape[1], image.shape[0]
-        bboxes, landmarks = predictions
-        target = []
-        for box, landmark in zip(bboxes, landmarks):
-            if box.shape[-1] != 5:
-                box = torch.Tensor([[0, 0, width, height, 1]]).to(box.device)
-                landmark = torch.zeros(1, 10)
-                
-            _target = torch.cat((box[:, :-1], landmark, box[:, -1:]), dim=-1)
-            _target = _target.float().to(box.device)
-            _target[:, -1] = 1
-            _target[:, (0, 2)] /= width
-            _target[:, (1, 3)] /= height
+    def make_targets(self, predictions, images):
 
-            target.append(_target)
+        batch_bboxes, batch_landmarks = predictions
+        targets = []
 
-        return target
+        for bboxes, landmarks, image in zip(batch_bboxes, batch_landmarks, images)
+            width, height = image.shape[1], image.shape[0]
+            for box, landmark in zip(bboxes, landmarks):
+                if box.shape[-1] != 5:
+                    box = torch.Tensor([[0, 0, width, height, 1]]).to(box.device)
+                    landmark = torch.zeros(1, 10)
+                    
+                _target = torch.cat((box[:, :-1], landmark, box[:, -1:]), dim=-1)
+                _target = _target.float().to(self.device)
+                _target[:, -1] = 1
+                _target[:, (0, 2)] /= width
+                _target[:, (1, 3)] /= height
 
-    def get_face_box(self, predictions, return_probs=False):
-        bboxes, _ = predictions
-        face_box = bboxes[0].squeeze(0).numpy().astype(np.int).tolist()
-        if not return_probs:
-            face_box = face_box[:-1]
-        return face_box
+                targets.append(_target)
+
+        return targets
+
+    def get_face_boxes(self, predictions, return_probs=False):
+        batch_bboxes, _ = predictions
+        face_boxes = []
+        for bboxes in batch_bboxes:
+            face_box = bboxes.squeeze(0).numpy().astype(np.int).tolist()
+            if not return_probs:
+                face_box = face_box[:-1]
+            face_boxes.append(face_box)
+        return face_boxes

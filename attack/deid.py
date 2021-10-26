@@ -1,13 +1,29 @@
 import numpy as np
 import cv2
 
-class Pixelate:
+class DeID:
+    """
+    Base class for deid function
+    """
+    def __init__(self) -> None:
+        pass
+
+    def forward_batch(self, images, face_boxes):
+        """
+        Forward batch of images
+        """
+        deid_images = []
+        for (image, face_box) in zip(images, face_boxes):
+            deid_images.append(self(image, face_box))
+
+class Pixelate(DeID):
     """
     Pixelate face in the image
     :params:
         blocks: number of pixelated blocks
     """
     def __init__(self, blocks=3) -> None:
+        super().__init__()
         self.blocks = blocks
 
     def __call__(self, image, face_box):
@@ -46,13 +62,14 @@ class Pixelate:
         # return the pixelated blurred image
         return image
 
-class Blur:
+class Blur(DeID):
     """
     Gaussian Blur face in the image
     :params:
         blocks: Gaussian filter size
     """
     def __init__(self, kernel_size=3) -> None:
+        super().__init__()
         self.kernel_size = (kernel_size, kernel_size)
 
     def __call__(self, image, face_box):

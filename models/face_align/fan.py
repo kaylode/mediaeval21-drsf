@@ -24,8 +24,10 @@ class FANAlignment(BaseAlignment):
         self.model = FaceAlignment(
             LandmarksType._2D,
             flip_input=False,
-            device= 'cuda:0' if torch.cuda.is_available() else 'cpu'
+            device= 'cuda' if torch.cuda.is_available() else 'cpu'
         )
+
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     def _get_scale_and_center(self, face_box):
         center = torch.tensor(
@@ -64,4 +66,4 @@ class FANAlignment(BaseAlignment):
         return heatmaps, landmarks
 
     def make_targets(self, predictions):
-        return torch.from_numpy(predictions[0])
+        return torch.from_numpy(predictions[0]).to(self.device)
