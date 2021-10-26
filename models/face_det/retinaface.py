@@ -40,6 +40,7 @@ class RetinaFaceDetector(BaseDetector):
         self.model = self.model.to(self.device)
 
     def preprocess(self, images):
+        images = np.stack(images, axis=0)
         return images
 
     def postprocess(self, images):

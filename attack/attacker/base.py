@@ -23,13 +23,14 @@ class Attacker:
             query: list of cv2 image
         :return: torch tensors of images
         """
-        if not isinstance(query, list):
+        if len(query.shape)==3:
             query = [query]
 
         if isinstance(query[0], torch.Tensor):
             torch_images = query
         else:
-            torch_images = [TFF.to_tensor(i) for i in query]
+            torch_images = [
+              TFF.to_tensor(i) if query.shape[-1] == 3 else torch.from_numpy(i) for i in query]
 
         return torch.stack(torch_images, dim=0).contiguous()
 

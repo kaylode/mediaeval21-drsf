@@ -15,18 +15,6 @@ class FaceAttacker(Attacker):
     def __init__(self, optim, n_iter=10, eps=8/255.):
         super().__init__(optim, n_iter, eps)
 
-    def _generate_adv(self, images, face_boxes, deid_fn):
-        """
-        Generate deid image
-        :params:
-            images: list of cv2 image
-            face_boxes: bounding boxes of face in the image. In (x1,y1,x2,y2) format
-            deid_fn: De-identification method
-        :return: deid cv2 image
-        """
-        deid = deid_fn.forward_batch(images, face_boxes)
-        return deid
-
     def _generate_targets(self, victim, images):
         """
         Generate target for image using victim model
@@ -49,17 +37,17 @@ class FaceAttacker(Attacker):
 
         # Make targets and face_box
         targets = victim.make_targets(predictions, images)
-        face_boxes = victim.get_face_boxes(predictions)
+        # face_boxes = victim.get_face_boxes(predictions)
 
-        return face_boxes, targets
+        return targets
 
-    def attack(self, victim, images, deid_fn, face_boxes=None, targets=None, optim_params={}):
+    def attack(self, victim, images, deid_images, targets=None, optim_params={}):
         """
         Performs attack flow on image
         :params:
             images: list of cv2 images
             victim: victim detection model
-            deid_fn: De-identification method
+            deid_images: list of De-identification cv2 images
             face_boxes: boxes of faces
             targets: targets for image
             optim_params: keyword arguments that will be passed to optim
@@ -67,13 +55,10 @@ class FaceAttacker(Attacker):
             adv_res: adversarial cv2 images
         """
         # Generate target
-        if face_boxes is None and targets is None:
-            face_boxes, targets = self._generate_targets(victim, images)
+        if targets is None:
+            targets = self._generate_targets(victim, images)
 
-        # De-id image with face box
-        deid = self._generate_adv(images, face_boxes, deid_fn)
-
-        deid_norm = victim.preprocess(deid) 
+        deid_norm = victim.preprocess(deid_images) 
         deid_tensor = self._generate_tensors(deid_norm)
         
         # Get attack algorithm

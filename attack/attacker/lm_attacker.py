@@ -12,18 +12,6 @@ class LandmarkAttacker(Attacker):
     def __init__(self, optim, n_iter=10, eps=8/255.):
         super().__init__(optim, n_iter, eps)
 
-    def _generate_adv(self, images, face_boxes, deid_fn):
-        """
-        Generate deid image
-        :params:
-            images: list of cv2 image
-            face_boxes: bounding boxes of face in the image. In (x1,y1,x2,y2) format
-            deid_fn: De-identification method
-        :return: list of deid cv2 image
-        """
-        deid = deid_fn.forward_batch(images, face_boxes)
-        return deid
-
     def _generate_targets(self, victim, images, centers, scales):
         """
         Generate target for image using victim model
@@ -37,7 +25,7 @@ class LandmarkAttacker(Attacker):
         """
 
         # Normalize image
-        query, _, _, _ = victim.preprocess(images, centers, scales)
+        query = victim.preprocess(images, centers, scales)
         query = self._generate_tensors(query)
 
         # Detect on raw image
@@ -48,13 +36,13 @@ class LandmarkAttacker(Attacker):
   
         return targets
 
-    def attack(self, victim, images, deid_fn, face_boxes, targets=None, optim_params={}):
+    def attack(self, victim, images, deid_images, face_boxes, targets=None, optim_params={}):
         """
         Performs attack flow on image
         :params:
             images: list of cv2 images
             victim: victim detection model
-            deid_fn: De-identification method
+            deid_images: list of De-identification cv2 images
             face_boxes: boxes of faces
             targets: targets for images
             optim_params: keyword arguments that will be passed to optim
@@ -69,9 +57,8 @@ class LandmarkAttacker(Attacker):
         if targets is None:
             targets = self._generate_targets(victim, images, centers, scales)
         
-        # De-id images with face boxes
-        deid = self._generate_adv(images, face_boxes, deid_fn)
-        deid_norm, new_boxes, old_boxes, old_shapes = victim.preprocess(deid, centers, scales) 
+        # De-id images
+        deid_norm, new_boxes, old_boxes, old_shapes = victim.preprocess(deid_images, centers, scales, return_points=True) 
 
         deid_tensor = self._generate_tensors(deid_norm)
         

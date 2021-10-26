@@ -42,7 +42,7 @@ class FANAlignment(BaseAlignment):
 
         return centers, scales
 
-    def preprocess(self, images, centers, scales):
+    def preprocess(self, images, centers, scales, return_points=False):
         # RGB Image
         batch_inputs = []
         new_boxes = []
@@ -56,7 +56,12 @@ class FANAlignment(BaseAlignment):
             new_boxes.append(new_box)
             old_boxes.append(old_box)
             old_shapes.append(old_shape)
-        return batch_inputs, new_boxes, old_boxes, old_shapes
+        batch_inputs = np.stack(batch_inputs, axis=0)
+
+        if return_points:
+            return batch_inputs, new_boxes, old_boxes, old_shapes
+        else:
+            return batch_inputs
 
     def postprocess(self, ori_images, crop_images, old_boxes, new_boxes, old_shapes):
         
