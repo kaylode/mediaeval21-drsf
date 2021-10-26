@@ -80,16 +80,11 @@ class FaceAttacker(Attacker):
         # Generate target
         if face_boxes is None and targets is None:
             face_boxes, targets = self._generate_targets(victim, images)
-        
+
         # De-id image with face box
         deid = self._generate_adv(images, face_boxes, deid_fn)
-        deid_norm = victim.preprocess(deid) 
 
-        # To tensor, allow gradients to be saved
-        # if not isinstance(deid_norm, torch.Tensor):
-        #     deid_tensor = TFF.to_tensor(deid_norm).contiguous()
-        # else:
-        #     deid_tensor = deid_norm.clone()   
+        deid_norm = victim.preprocess(deid) 
         deid_tensor = self._generate_tensors(deid_norm)
         
         # Get attack algorithm

@@ -42,10 +42,10 @@ class RetinaFaceDetector(BaseDetector):
     def preprocess(self, images):
         return images
 
-    def postprocess(self, image):
-        image = image.detach().numpy().squeeze().transpose((1,2,0))
-        image = (image*255).astype(np.uint8)
-        return image
+    def postprocess(self, images):
+        images = images.detach().numpy().squeeze().transpose((0,2,3,1))
+        images = (images*255).astype(np.uint8)
+        return images
 
     def forward(self, imgs, target_bboxes):
         loss_fn = DetectionLoss(self.config, image_size = imgs.shape[-2:])
@@ -73,20 +73,18 @@ class RetinaFaceDetector(BaseDetector):
         batch_bboxes, batch_landmarks = predictions
         targets = []
 
-        for bboxes, landmarks, image in zip(batch_bboxes, batch_landmarks, images)
+        for box, landmark, image in zip(batch_bboxes, batch_landmarks, images):
             width, height = image.shape[1], image.shape[0]
-            for box, landmark in zip(bboxes, landmarks):
-                if box.shape[-1] != 5:
-                    box = torch.Tensor([[0, 0, width, height, 1]]).to(box.device)
-                    landmark = torch.zeros(1, 10)
-                    
-                _target = torch.cat((box[:, :-1], landmark, box[:, -1:]), dim=-1)
-                _target = _target.float().to(self.device)
-                _target[:, -1] = 1
-                _target[:, (0, 2)] /= width
-                _target[:, (1, 3)] /= height
+            if box.shape[-1] != 5:
+                box = torch.Tensor([[0, 0, width, height, 1]]).to(box.device)
+                landmark = torch.zeros(1, 10)
+            _target = torch.cat((box[:, :-1], landmark, box[:, -1:]), dim=-1)
+            _target = _target.float().to(self.device)
+            _target[:, -1] = 1
+            _target[:, (0, 2)] /= width
+            _target[:, (1, 3)] /= height
 
-                targets.append(_target)
+            targets.append(_target)
 
         return targets
 

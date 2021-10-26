@@ -7,32 +7,32 @@ class BaseDetector(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def preprocess(self, cv2_image):
+    def preprocess(self, images):
         """
         Preprocess the input image before being passed into model
         :params:
-            cv2_image: image in cv2 format. 
+            images: images in cv2 format. 
         :return: processed image
         """
         raise NotImplementedError("This is an interface method")
 
-    def postprocess(self, adv_image):
+    def postprocess(self, adv_images):
         """
         Postprocess the adversarial image after being attacked.
         Convert the adversarial image into cv2 format
         :params:
-            adv_image: attacked image. 
+            adv_images: attacked images. 
         :return: cv2 image
         """
         raise NotImplementedError("This is an interface method")
 
-    def forward(self, adv_image, targets):
+    def forward(self, adv_images, targets):
         """
         Forward the attacking image and targets to compute gradients
         :params:
-            adv_image: adversarial image, also stores gradients. 
+            adv_images: adversarial images, also stores gradients. 
             targets: targets fit model and adversarial image. 
-        :return: adversarial image
+        :return: adversarial images
         """
         raise NotImplementedError("This is an interface method")
 
@@ -45,17 +45,17 @@ class BaseDetector(nn.Module):
         """
         raise NotImplementedError("This is an interface method")
 
-    def make_targets(self, predictions, cv2_image):
+    def make_targets(self, predictions, images):
         """
         Make the targets from the predictions of model
         :params:
             predictions: model prediction. 
-            cv2_image: raw cv2 image. 
+            images: list of cv2 image. 
         :return: model targets
         """
         raise NotImplementedError("This is an interface method")
 
-    def get_face_box(self, predictions, return_probs):
+    def get_face_boxes(self, predictions, return_probs):
         """
         Extract the bounding box from model predictions
         :params:

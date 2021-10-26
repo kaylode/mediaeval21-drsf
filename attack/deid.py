@@ -15,6 +15,7 @@ class DeID:
         deid_images = []
         for (image, face_box) in zip(images, face_boxes):
             deid_images.append(self(image, face_box))
+        return deid_images
 
 class Pixelate(DeID):
     """
