@@ -15,17 +15,6 @@ class FaceAttacker(Attacker):
     def __init__(self, optim, n_iter=10, eps=8/255.):
         super().__init__(optim, n_iter, eps)
 
-    def _generate_tensors(self, query):
-        if not isinstance(query, list):
-            query = [query]
-
-        if isinstance(query[0], torch.Tensor):
-            torch_images = query
-        else:
-            torch_images = [TFF.to_tensor(i) for i in query]
-
-        return torch.stack(torch_images, dim=0).contiguous()
-
     def _generate_adv(self, images, face_boxes, deid_fn):
         """
         Generate deid image
@@ -45,7 +34,7 @@ class FaceAttacker(Attacker):
             images: list of cv2 image
             victim: victim detection model
         :return: 
-            face_box: bounding box of face in the image. In (x1,y1,x2,y2) format
+            face_boxes: bounding boxes of face in the image. In (x1,y1,x2,y2) format
             targets: targets for image
         """
 
@@ -75,7 +64,7 @@ class FaceAttacker(Attacker):
             targets: targets for image
             optim_params: keyword arguments that will be passed to optim
         :return: 
-            adv_res: adversarial cv2 image
+            adv_res: adversarial cv2 images
         """
         # Generate target
         if face_boxes is None and targets is None:

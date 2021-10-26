@@ -1,12 +1,9 @@
-import torch
-from torchvision.transforms import functional as TFF
-
 from attack.algorithms import get_optim
 from .base import Attacker
 
 class LandmarkAttacker(Attacker):
     """
-    Face model Attacker class
+    Landmark model Attacker class
     :params:
         optim: name of attack algorithm
         n_iter: number of iterations
@@ -15,70 +12,68 @@ class LandmarkAttacker(Attacker):
     def __init__(self, optim, n_iter=10, eps=8/255.):
         super().__init__(optim, n_iter, eps)
 
-    def _generate_adv(self, cv2_image, face_box, deid_fn):
+    def _generate_adv(self, images, face_boxes, deid_fn):
         """
         Generate deid image
         :params:
-            cv2_image: cv2 image
-            face_box: bounding box of face in the image. In (x1,y1,x2,y2) format
+            images: list of cv2 image
+            face_boxes: bounding boxes of face in the image. In (x1,y1,x2,y2) format
             deid_fn: De-identification method
-        :return: deid cv2 image
+        :return: list of deid cv2 image
         """
-        deid = deid_fn(cv2_image, face_box)
+        deid = deid_fn.forward_batch(images, face_boxes)
         return deid
 
-    def _generate_targets(self, victim, cv2_image, center, scale):
+    def _generate_targets(self, victim, images, centers, scales):
         """
         Generate target for image using victim model
         :params:
-            cv2_image: cv2 image
+            images: cv2 image
             victim: victim detection model
+            centers: center of face boxes
+            scales: scales of face boxes
         :return: 
-            face_box: bounding box of face in the image. In (x1,y1,x2,y2) format
-            targets: targets for image
+            targets: targets for images
         """
 
         # Normalize image
-        query, _, _, _ = victim.preprocess(cv2_image, center, scale)
+        query, _, _, _ = victim.preprocess(images, centers, scales)
+        query = self._generate_tensors(query)
 
         # Detect on raw image
-        predictions = victim.detect(query, center, scale)
+        predictions = victim.detect(query, centers, scales)
 
         # Make targets and face_box
         targets = victim.make_targets(predictions)
-
+  
         return targets
 
-    def attack(self, victim, cv2_image, deid_fn, face_box, targets=None, optim_params={}):
+    def attack(self, victim, images, deid_fn, face_boxes, targets=None, optim_params={}):
         """
         Performs attack flow on image
         :params:
-            cv2_image: raw cv2 image
+            images: list of cv2 images
             victim: victim detection model
             deid_fn: De-identification method
-            face_box: box of face
-            targets: targets for image
+            face_boxes: boxes of faces
+            targets: targets for images
             optim_params: keyword arguments that will be passed to optim
         :return: 
-            adv_res: adversarial cv2 image
+            adv_res: adversarial cv2 images
         """
 
-        # Get center and scale for preprocess
-        center, scale = victim._get_scale_and_center(face_box)
+        # Get centers and scales for preprocess
+        centers, scales = victim._get_scales_and_centers(face_boxes)
 
-        # Generate target
+        # Generate targets
         if targets is None:
-            targets = self._generate_targets(victim, cv2_image, center, scale)
+            targets = self._generate_targets(victim, images, centers, scales)
         
-        # De-id image with face box
-        deid = self._generate_adv(cv2_image, face_box, deid_fn)
-        deid_norm, new_box, old_box, old_shape = victim.preprocess(deid, center, scale) 
+        # De-id images with face boxes
+        deid = self._generate_adv(images, face_boxes, deid_fn)
+        deid_norm, new_boxes, old_boxes, old_shapes = victim.preprocess(deid, centers, scales) 
 
-        # To tensor, allow gradients to be saved
-        if not isinstance(deid_norm, torch.Tensor):
-            deid_tensor = TFF.to_tensor(deid_norm).contiguous()
-        else:
-            deid_tensor = deid_norm.clone()   
+        deid_tensor = self._generate_tensors(deid_norm)
         
         # Get attack algorithm
         optim = get_optim(self.optim, params=[deid_tensor], epsilon=self.eps, **optim_params)
@@ -87,9 +82,9 @@ class LandmarkAttacker(Attacker):
         deid_tensor.requires_grad = True
         adv_res = self._iterative_attack(deid_tensor, targets, victim, optim, self.n_iter)
 
-        # Postprocess, return cv2 image
+        # Postprocess, return adversarial images
         adv_res = victim.postprocess(
-            cv2_image, adv_res, 
-            old_box, new_box, old_shape)
+            images, adv_res, 
+            old_boxes, new_boxes, old_shapes)
 
         return adv_res
