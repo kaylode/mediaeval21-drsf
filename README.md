@@ -3,80 +3,74 @@
 ## Example use cases
 ### Non-targeted attack
 
-- Face Detection
+- Attack on batch
 ```python
-from models.face_det.retinaface import MTCNNDetector
-from attack.attacker import FaceAttacker
 from attack.deid import Pixelate
+from models.face_align.fan import FANAlignment
+from models.face_det.retinaface import RetinaFaceDetector
+from attack.attacker import FaceAttacker, LandmarkAttacker, generate_tensors
 
-input_img = cv2.imread("./assets/test_images/paul_rudd/1.jpg")
-cv2_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
+# Init models, attackers
+align_model = FANAlignment()
+det_model = RetinaFaceDetector()
+det_attacker = FaceAttacker(optim='I-FGSM')
+lm_attacker = LandmarkAttacker(optim='I-FGSM')
+deid_fn = Pixelate(20)
 
-attacker = FaceAttacker(optim='RMSprop')   # Use RMSprop method
-x_adv = attacker.attack(
-    cv2_image = cv2_image,            # query image
-    victim = MTCNNDetector(),       # attack mtcnn
-    deid_fn = Pixelate(10),           # use pixelate method
-    optim_params = {
-        "min_value": -1               # mtcnn requires
-    }) 
-    
-plt.imshow(x_adv)
+def doit(batch):
+    """
+    Attack batch of images on detection and alignment models
+    :params: 
+        batch: list of cv2 image
+    :return: list of adversarial images
+    """
+    # Generate truth bboxes
+    det_norm = det_model.preprocess(batch)
+    det_norm = generate_tensors(det_norm)
+    det_results = det_model.detect(det_norm)
+    face_boxes = det_model.get_face_boxes(det_results)
+
+    # Generate deid images
+    adv_images = deid_fn.forward_batch(batch, face_boxes)
+
+    # Stage one, attack detection
+
+    adv_det_imgs = det_attacker.attack(
+        victim = det_model,
+        images = batch,
+        deid_images = adv_images
+    )
+
+    # Predict face bboxes on adversarial images
+    adv_det_norm = det_model.preprocess(adv_det_imgs)
+    adv_det_norm = generate_tensors(adv_det_norm)
+    adv_det_results = det_model.detect(adv_det_norm)
+    adv_face_boxes = det_model.get_face_boxes(adv_det_results)
+
+    # Check if a box is empty, if so, use previous box or next box
+    for idx, box in enumerate(adv_face_boxes):
+        if len(box) == 0:
+           adv_face_boxes[idx] = adv_face_boxes[idx-1]
+
+    # Stage two, attack alignment
+    # Attack alignment model using adversarial images from above
+    # Use original images to generate ground truths
+
+    adv_lm_imgs = lm_attacker.attack(
+        victim = align_model,
+        images = batch,
+        deid_images = adv_det_imgs,
+        face_boxes = adv_face_boxes
+    )
+
+    return adv_lm_imgs
 ```
 
-| Input image | Model prediction after deid + attack |
+<!-- | Input image | Model prediction after deid + attack |
 |:-------------------------:|:-------------------------:|
 |<img width="450" alt="screen" src="assets/test_images/paul_rudd/1.jpg"> | <img width="450" alt="screen" src="assets/deid2.jpg"> |
+|<img width="450" alt="screen" src="assets/lmraw.jpg"> | <img width="450" alt="screen" src="assets/lmdeid.jpg"> | -->
 
-- Face Landmarks Estimation
-```python
-from models.face_align.fan import FANAlignment
-from attack.attacker import LandmarkAttacker
-from attack.deid import Pixelate
-
-face_box = [186, 194, 320, 375]
-attacker = LandmarkAttacker(optim='RMSprop')   # Use RMSprop method
-x_adv = attacker.attack(
-    cv2_image = cv2_image,            # query image
-    victim = FANAlignment(),       # attack mtcnn
-    face_box = face_box,
-    deid_fn = Pixelate(10))           # use pixelate method
-
-plt.imshow(x_adv)
-```
-
-| Input image | Model prediction after deid + attack |
-|:-------------------------:|:-------------------------:|
-|<img width="450" alt="screen" src="assets/lmraw.jpg"> | <img width="450" alt="screen" src="assets/lmdeid.jpg"> |
-
-### Targeted attack
-```python
-from models.face_det.retinaface import RetinaFaceDetector
-from attack.attacker import FaceAttacker
-from attack.deid import Pixelate
-
-input_img = cv2.imread("./assets/raw.jpg")
-cv2_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
-
-targets = [tensor([[182.4111,  64.1539, 309.9272, 243.2287, 216.0245, 131.3289, 276.3042,
-          132.5408, 244.9431, 167.0494, 221.2922, 198.1093, 269.2490, 198.9554,
-            0.9995]])]
-face_box = [182, 64, 309, 243]
-
-attacker = FaceAttacker(optim='I-FGSM')   # Use IFGSM method
-x_adv = attacker.attack(
-    cv2_image = cv2_image,            # query image
-    victim = RetinaFaceDetector(),  # attack retinaface
-    deid_fn = Pixelate(10),           # use pixelate method
-    face_box = face_box,            
-    targets = targets)
-    
-plt.imshow(x_adv)
-```
-
-| Input image + target | Model prediction after deid + attack |
-|:-------------------------:|:-------------------------:|
-|<img width="450" alt="screen" src="assets/raw.jpg"> | <img width="450" alt="screen" src="assets/deid.jpg"> |
 
 ## Colab Notebooks
 - Pixelate Landmarks [![Notebook](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1nhtWSODf3UD7ptKLLzneAbE9MtRq-q-7?usp=sharing)
