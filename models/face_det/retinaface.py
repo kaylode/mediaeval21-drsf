@@ -44,7 +44,7 @@ class RetinaFaceDetector(BaseDetector):
         return images
 
     def postprocess(self, images):
-        images = images.detach().numpy().squeeze().transpose((0,2,3,1))
+        images = images.detach().numpy().transpose((0,2,3,1))
         images = (images*255).astype(np.uint8)
         return images
 
