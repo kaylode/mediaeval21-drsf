@@ -66,15 +66,17 @@ def doit(batch):
     return adv_lm_imgs
 ```
 
-<!-- | Input image | Model prediction after deid + attack |
+| Original images | Predictions before deid | Predictions after deid |
 |:-------------------------:|:-------------------------:|
-|<img width="450" alt="screen" src="assets/test_images/paul_rudd/1.jpg"> | <img width="450" alt="screen" src="assets/deid2.jpg"> |
-|<img width="450" alt="screen" src="assets/lmraw.jpg"> | <img width="450" alt="screen" src="assets/lmdeid.jpg"> | -->
+|<img width="450" alt="screen" src="assets/results/ori.jpg"> | <img width="450" alt="screen" src="assets/results/raw.jpg"> | <img width="450" alt="screen" src="assets/results/deid.jpg"> |
+|<img width="450" alt="screen" src="assets/results/ori2.jpg"> | <img width="450" alt="screen" src="assets/results/raw2.jpg"> | <img width="450" alt="screen" src="assets/results/deid2.jpg"> |
+|<img width="450" alt="screen" src="assets/results/ori3.jpg"> | <img width="450" alt="screen" src="assets/results/raw3.jpg"> | <img width="450" alt="screen" src="assets/results/deid3.jpg"> |
+|<img width="450" alt="screen" src="assets/results/ori4.jpg"> | <img width="450" alt="screen" src="assets/results/raw4.jpg"> | <img width="450" alt="screen" src="assets/results/deid4.jpg"> |
 
 
 ## Colab Notebooks
 - Pixelate Landmarks [![Notebook](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1nhtWSODf3UD7ptKLLzneAbE9MtRq-q-7?usp=sharing)
-- Adversarial Attack [![Notebook](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1ILpV_ovjboPpmqmImZZBEf-Rmv9mRoN8?usp=sharing)
+- Adversarial Attack [![Notebook](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1BXiBrxdfAK2JEW2uU7ZshKLPbD4ZSXXb?usp=sharing)
 
 ## Code References
 - https://github.com/timesler/facenet-pytorch
