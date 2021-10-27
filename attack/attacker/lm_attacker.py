@@ -71,7 +71,7 @@ class LandmarkAttacker(Attacker):
 
         # Postprocess, return adversarial images
         adv_res = victim.postprocess(
-            images, adv_res, 
+            deid_images, adv_res, 
             old_boxes, new_boxes, old_shapes)
 
         return adv_res
