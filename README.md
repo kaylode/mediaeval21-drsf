@@ -67,7 +67,7 @@ def doit(batch):
 ```
 
 | Original images | Predictions before deid | Predictions after deid |
-|:-------------------------:|:-------------------------:|
+|:-------------------------:|:-------------------------:|:-------------------------:|
 |<img width="450" alt="screen" src="assets/results/ori.jpg"> | <img width="450" alt="screen" src="assets/results/raw.jpg"> | <img width="450" alt="screen" src="assets/results/deid.jpg"> |
 |<img width="450" alt="screen" src="assets/results/ori2.jpg"> | <img width="450" alt="screen" src="assets/results/raw2.jpg"> | <img width="450" alt="screen" src="assets/results/deid2.jpg"> |
 |<img width="450" alt="screen" src="assets/results/ori3.jpg"> | <img width="450" alt="screen" src="assets/results/raw3.jpg"> | <img width="450" alt="screen" src="assets/results/deid3.jpg"> |
