@@ -91,6 +91,9 @@ class FullAttacker(Attacker):
         deid_tensor = self._generate_tensors(deid_norm)
         deid_tensor.requires_grad = True
         
+        # Batch size for normalize loss
+        batch_size = deid_tensor.shape[0]
+
         # Get attack algorithm
         optim = get_optim(self.optim, params=[deid_tensor], epsilon=self.eps, **optim_params)
 
@@ -107,7 +110,7 @@ class FullAttacker(Attacker):
 
                 lm_loss = victims[1](lm_inputs, lm_targets)
                 
-                if det_loss.item() > 1.0:
+                if det_loss.item()/batch_size > 1.0:
                     loss = lm_loss + det_loss
                 else:
                     loss = lm_loss
