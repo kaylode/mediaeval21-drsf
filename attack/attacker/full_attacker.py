@@ -1,5 +1,4 @@
 import torch
-from torchvision.transforms import functional as TFF
 
 from attack.algorithms import get_optim
 from .base import Attacker
@@ -74,7 +73,6 @@ class FullAttacker(Attacker):
             images: list of cv2 images
             victim: victim detection model
             deid_images: list of De-identification cv2 images
-            face_boxes: boxes of faces
             targets: targets for image
             optim_params: keyword arguments that will be passed to optim
         :return: 
@@ -83,7 +81,7 @@ class FullAttacker(Attacker):
         # Generate target
         if targets is None:
             targets, face_boxes = self._generate_targets(victims[0], images)
-
+        
         # Get centers and scales for preprocess
         centers, scales = victims[1]._get_scales_and_centers(face_boxes)
         lm_targets = self._generate_targets2(victims[1], images, centers, scales)
@@ -96,7 +94,6 @@ class FullAttacker(Attacker):
         # Get attack algorithm
         optim = get_optim(self.optim, params=[deid_tensor], epsilon=self.eps, **optim_params)
 
-        
         for _ in range(self.n_iter):
             optim.zero_grad()
             with torch.set_grad_enabled(True):
@@ -104,15 +101,18 @@ class FullAttacker(Attacker):
                 
                 lm_inputs = []
                 for deid, center, scale in zip(deid_tensor, centers, scales):
-                    lm_input, new_boxes, old_boxes, old_shapes = crop_tensor(deid, center, scale, return_points=True)
+                    lm_input = crop_tensor(deid, center, scale)
                     lm_inputs.append(lm_input)
                 lm_inputs = torch.stack(lm_inputs, dim=0)
 
                 lm_loss = victims[1](lm_inputs, lm_targets)
+                
+                if det_loss.item() > 1.0:
+                    loss = lm_loss + det_loss
+                else:
+                    loss = lm_loss
 
-                loss = lm_loss + det_loss
-
-            loss.backward()
+                loss.backward()
 
             # if mask is not None:
             #     att_img.grad[mask] = 0
@@ -123,5 +123,5 @@ class FullAttacker(Attacker):
         adv_res = deid_tensor.clone()
 
         # Postprocess, return cv2 image
-        # adv_res = victims[0].postprocess(adv_res)
+        adv_res = victims[0].postprocess(adv_res)
         return adv_res
