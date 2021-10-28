@@ -3,6 +3,25 @@ from torchvision.transforms import functional as TFF
 
 from attack.algorithms import get_optim
 
+
+def generate_tensors(query):
+    """
+    Generate tensors to allow computing gradients
+    :params:
+        query: list of cv2 image
+    :return: torch tensors of images
+    """
+    if len(query.shape)==3:
+        query = [query]
+
+    if isinstance(query[0], torch.Tensor):
+        torch_images = query
+    else:
+        torch_images = [
+            TFF.to_tensor(i) if query.shape[-1] == 3 else torch.from_numpy(i) for i in query]
+
+    return torch.stack(torch_images, dim=0).contiguous()
+
 class Attacker:
     """
     Abstract class for Attacker
@@ -16,20 +35,29 @@ class Attacker:
         self.eps = eps
         self.optim = optim
     
-    def _generate_adv(self, query_image):
+    def _generate_tensors(self, query):
+        """
+        Generate tensors to allow computing gradients
+        :params:
+            query: list of cv2 image
+        :return: torch tensors of images
+        """
+        return generate_tensors(query)
+
+    def _generate_adv(self, images):
         """
         Generate adversarial image
         :params:
-            query_image: cv2 image
+            images: list of cv2 image
         :return: adversarial cv2 image
         """
         raise NotImplementedError("This is an interface method")
 
-    def _generate_targets(self, victim, query_image):
+    def _generate_targets(self, victim, images):
         """
         Generate target for image using victim model
         :params:
-            query_image: cv2 image
+            images: list of cv2 image
             victim: victim detection model
         :return: 
             targets: targets for image
@@ -64,11 +92,11 @@ class Attacker:
         results = att_img.clone()
         return results
 
-    def attack(self, victim, query_image, targets=None, optim_params={}):
+    def attack(self, victim, query_images, targets=None, optim_params={}):
         """
         Performs attack flow on image
         :params:
-            query_image: raw cv2 image
+            query_images: raw cv2 image
             victim: victim detection model
             targets: targets for image
             optim_params: keyword arguments that will be passed to optim
@@ -77,24 +105,21 @@ class Attacker:
         """
         # Generate target
         if targets is None:
-            targets = self._generate_targets(victim, query_image)
+            targets = self._generate_targets(victim, query_images)
         
         # Generate adverasarial
-        adv_img = self._generate_adv(query_image)
-        adv_norm = victim.preprocess(adv_img) 
+        adv_imgs = self._generate_adv(query_images)
+        adv_norm = victim.preprocess(adv_imgs) 
 
         # To tensor, allow gradients to be saved
-        if not isinstance(adv_norm, torch.Tensor):
-            adv_tensor = TFF.to_tensor(adv_norm).contiguous()
-        else:
-            adv_tensor = adv_norm.clone()   
+        adv_tensors = self._generate_tensors(adv_norm)
         
         # Get attack algorithm
-        optim = get_optim(self.optim, params=[adv_tensor], epsilon=self.eps, **optim_params)
+        optim = get_optim(self.optim, params=[adv_tensors], epsilon=self.eps, **optim_params)
 
         # Adversarial attack
-        adv_tensor.requires_grad = True
-        adv_res = self._iterative_attack(adv_tensor, targets, victim, optim, self.n_iter)
+        adv_tensors.requires_grad = True
+        adv_res = self._iterative_attack(adv_tensors, targets, victim, optim, self.n_iter)
 
         # Postprocess, return cv2 image
         adv_res = victim.postprocess(adv_res)
