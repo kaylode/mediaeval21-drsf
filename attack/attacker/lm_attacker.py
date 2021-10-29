@@ -61,12 +61,12 @@ class LandmarkAttacker(Attacker):
         deid_norm, new_boxes, old_boxes, old_shapes = victim.preprocess(deid_images, centers, scales, return_points=True) 
 
         deid_tensor = self._generate_tensors(deid_norm)
+        deid_tensor.requires_grad = True
         
         # Get attack algorithm
         optim = get_optim(self.optim, params=[deid_tensor], epsilon=self.eps, **optim_params)
 
         # Adversarial attack
-        deid_tensor.requires_grad = True
         adv_res = self._iterative_attack(deid_tensor, targets, victim, optim, self.n_iter)
 
         # Postprocess, return adversarial images

@@ -8,14 +8,13 @@
 from attack.deid import Pixelate
 from models.face_align.fan import FANAlignment
 from models.face_det.retinaface import RetinaFaceDetector
-from attack.attacker import FaceAttacker, LandmarkAttacker, generate_tensors
+from attack.attacker import FullAttacker, generate_tensors
 
 # Init models, attackers
 align_model = FANAlignment()
 det_model = RetinaFaceDetector()
-det_attacker = FaceAttacker(optim='I-FGSM')
-lm_attacker = LandmarkAttacker(optim='I-FGSM')
-deid_fn = Pixelate(20)
+attacker = FullAttacker('I-FGSM', n_iter=20)
+deid_fn = Pixelate(15)
 
 def doit(batch):
     """
@@ -30,38 +29,29 @@ def doit(batch):
     det_results = det_model.detect(det_norm)
     face_boxes = det_model.get_face_boxes(det_results)
 
+    # Check if a box is empty, if so, use previous box or next box
+    for idx, box in enumerate(face_boxes):
+        if len(box) == 0:
+           face_boxes[idx] = face_boxes[idx-1][:]
+
     # Generate deid images
-    adv_images = deid_fn.forward_batch(batch, face_boxes)
+    # adv_images = deid_fn.forward_batch([i.copy() for i in batch], face_boxes)
+    centers, scales = align_model._get_scales_and_centers(face_boxes)
+
+    adv_images = []
+    for cv2_image, center, scale in zip(batch, centers, scales):
+        _, old_box, _, _ = crop(cv2_image.copy(), center, scale, return_points=True)
+        deid_image = deid_fn(cv2_image.copy(), old_box)
+        adv_images.append(deid_image)
 
     # Stage one, attack detection
-
-    adv_det_imgs = det_attacker.attack(
-        victim = det_model,
-        images = batch,
-        deid_images = adv_images
-    )
-
-    # Predict face bboxes on adversarial images
-    adv_det_norm = det_model.preprocess(adv_det_imgs)
-    adv_det_norm = generate_tensors(adv_det_norm)
-    adv_det_results = det_model.detect(adv_det_norm)
-    adv_face_boxes = det_model.get_face_boxes(adv_det_results)
-
-    # Check if a box is empty, if so, use previous box or next box
-    for idx, box in enumerate(adv_face_boxes):
-        if len(box) == 0:
-           adv_face_boxes[idx] = adv_face_boxes[idx-1]
-
-    # Stage two, attack alignment
-    # Attack alignment model using adversarial images from above
-    # Use original images to generate ground truths
-
-    adv_lm_imgs = lm_attacker.attack(
-        victim = align_model,
-        images = batch,
-        deid_images = adv_det_imgs,
-        face_boxes = adv_face_boxes
-    )
+    adv_lm_imgs = attacker.attack(
+        victims = {
+            'detection': det_model, 
+            'alignment': align_model
+        }, 
+        images = batch, 
+        deid_images = adv_images)
 
     return adv_lm_imgs
 ```
@@ -72,6 +62,7 @@ def doit(batch):
 |<img width="450" alt="screen" src="assets/results/ori2.jpg"> | <img width="450" alt="screen" src="assets/results/raw2.jpg"> | <img width="450" alt="screen" src="assets/results/deid2.jpg"> |
 |<img width="450" alt="screen" src="assets/results/ori3.jpg"> | <img width="450" alt="screen" src="assets/results/raw3.jpg"> | <img width="450" alt="screen" src="assets/results/deid3.jpg"> |
 |<img width="450" alt="screen" src="assets/results/ori4.jpg"> | <img width="450" alt="screen" src="assets/results/raw4.jpg"> | <img width="450" alt="screen" src="assets/results/deid4.jpg"> |
+|<img width="450" alt="screen" src="assets/results/ori5.jpg"> | <img width="450" alt="screen" src="assets/results/raw5.jpg"> | <img width="450" alt="screen" src="assets/results/deid5.jpg"> |
 
 
 ## Colab Notebooks
