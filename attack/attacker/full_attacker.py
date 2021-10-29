@@ -16,63 +16,59 @@ class FullAttacker(Attacker):
     def __init__(self, optim, n_iter=10, eps=8/255.):
         super().__init__(optim, n_iter, eps)
 
-    def _generate_targets(self, victim, images):
+    def _generate_targets(self, victims, images):
         """
-        Generate target for image using victim detection model
+        Generate target for image using victim models
         :params:
             images: list of cv2 image
-            victim: victim detection model
+            victims: dictionary of victim models.  
         :return: 
             face_boxes: bounding boxes of face in the image. In (x1,y1,x2,y2) format
             targets: targets for image
         """
 
+        # Generate detection targets
         # Normalize image
-        query = victim.preprocess(images)
+        query = victims['detection'].preprocess(images)
 
         # To tensor, allow gradients to be saved
         query_tensor = self._generate_tensors(query)
 
         # Detect on raw image
-        predictions = victim.detect(query_tensor)
+        predictions = victims['detection'].detect(query_tensor)
 
         # Make targets and face_box
-        targets = victim.make_targets(predictions, images)
-        face_boxes = victim.get_face_boxes(predictions)
+        det_targets = victims['detection'].make_targets(predictions, images)
+        face_boxes = victims['detection'].get_face_boxes(predictions)
 
-        return targets, face_boxes
-
-    def _generate_targets2(self, victim, images, centers, scales):
-        """
-        Generate target for image using victim alignment model
-        :params:
-            images: cv2 image
-            victim: victim alignment model
-            centers: center of face boxes
-            scales: scales of face boxes
-        :return: 
-            targets: targets for images
-        """
-
+        # Generate alignment targets
+        # Get scales and centers of face boxes
+        centers, scales = victims["alignment"]._get_scales_and_centers(face_boxes)
+        
         # Normalize image
-        query = victim.preprocess(images, centers, scales)
+        query = victims["alignment"].preprocess(images, centers, scales)
         query = self._generate_tensors(query)
 
         # Detect on raw image
-        predictions = victim.detect(query, centers, scales)
+        predictions = victims["alignment"].detect(query, centers, scales)
 
         # Make targets
-        targets = victim.make_targets(predictions)
-  
-        return targets
+        lm_targets = victims["alignment"].make_targets(predictions)
+
+        return {
+            "detection": det_targets, 
+            "alignment": lm_targets, 
+            "alignment_centers": centers, 
+            "alignment_scales":scales
+        }
 
     def _iterative_attack(self, att_imgs, targets, victims, optim, n_iter, mask=None):
         """
         Performs iterative adversarial attack on batch images
         :params:
             att_imgs: input attack image
-            targets: attack targets
-            victims: list of models. Must be in order of detection model then alignment model
+            targets: dictionary of attack targets
+            victims: dictionary of victim models.  
             optim: optimizer
             n_iter: number of attack iterations
             mask: gradient mask
@@ -87,16 +83,21 @@ class FullAttacker(Attacker):
         for _ in range(n_iter):
             optim.zero_grad()
             with torch.set_grad_enabled(True):
-                det_loss = victims[0](att_imgs, targets[0])
+
+                # Forward face detection model
+                det_loss = victims["detection"](att_imgs, targets["detection"])
                 
+                # Generate cropped tensors to prepare for alignment model
                 lm_inputs = []
-                for deid, center, scale in zip(att_imgs, targets[2], targets[4]):
+                for deid, center, scale in zip(att_imgs, targets["alignment_centers"], targets["alignment_scales"]):
                     lm_input = crop_tensor(deid, center, scale)
                     lm_inputs.append(lm_input)
                 lm_inputs = torch.stack(lm_inputs, dim=0)
 
-                lm_loss = victims[1](lm_inputs, targets[1])
+                # Forward alignment model
+                lm_loss = victims["alignment"](lm_inputs, targets["alignment"])
                 
+                # Sum up loss
                 if det_loss.item()/batch_size > 1.0:
                     loss = lm_loss + det_loss
                 else:
@@ -109,7 +110,7 @@ class FullAttacker(Attacker):
 
             optim.step()
 
-        # Adversarial attack
+        # Get the adversarial images
         adv_res = att_imgs.clone()
         return adv_res
         
@@ -119,21 +120,19 @@ class FullAttacker(Attacker):
         Performs attack flow on image
         :params:
             images: list of rgb cv2 images
-            victims: list of models. Must be in order of detection model then alignment model
+            victims: dictionary of victim models.  
             deid_images: list of De-identification cv2 images
             optim_params: keyword arguments that will be passed to optim
         :return: 
             adv_res: adversarial cv2 images
         """
-        # Generate detection targets
-        det_targets, face_boxes = self._generate_targets(victims[0], images)
-        
-        # Generate alignment targets
-        centers, scales = victims[1]._get_scales_and_centers(face_boxes)
-        lm_targets = self._generate_targets2(victims[1], images, centers, scales)
+
+        assert "detection" in victims.keys() and "alignment" in victims.keys(), "Need both detection and alignment models to attack"
+
+        targets = self._generate_targets(victims, images)
 
         # Process deid images for detection model
-        deid_norm = victims[0].preprocess(deid_images) 
+        deid_norm = victims["detection"].preprocess(deid_images) 
 
         # To tensors and turn on gradients flow
         deid_tensor = self._generate_tensors(deid_norm)
@@ -145,11 +144,11 @@ class FullAttacker(Attacker):
         # Start iterative attack
         adv_res = self._iterative_attack(
             deid_tensor,
-            targets = [det_targets, lm_targets, centers, scales],
+            targets = targets,
             victims = victims,
             optim=optim,
             n_iter=self.n_iter)
 
         # Postprocess, return cv2 image
-        adv_res = victims[0].postprocess(adv_res)
-        return adv_res
+        adv_images = victims["detection"].postprocess(adv_res)
+        return adv_images
