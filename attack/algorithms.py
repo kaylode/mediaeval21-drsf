@@ -86,29 +86,29 @@ class WrapOptim:
         self.optim.zero_grad()
 
 def get_optim(name, params, epsilon, **kwargs) -> I_FGSM:
-    if name == 'I-FGSM': 
+    if name == 'i-fgsm': 
         return I_FGSM(params, epsilon, **kwargs)
-    if name == 'MI-FGSM':
+    if name == 'mi-fgsm':
         return MI_FGSM(params, epsilon, **kwargs)
 
     optimizer = None
-    if name == 'Adadelta':
+    if name == 'adadelta':
         optimizer = Adadelta(params)
-    if name == 'Adagrad':
+    if name == 'adagrad':
         optimizer = Adagrad(params)
-    if name == 'Adam':
+    if name == 'adam':
         optimizer = Adam(params)
-    if name == 'AdamW':
+    if name == 'adamw':
         optimizer = AdamW(params)
-    if name == 'Adamax':
+    if name == 'adamax':
         optimizer = Adamax(params)
-    if name == 'ASGD':
+    if name == 'asgd':
         optimizer = ASGD(params)
-    if name == 'RMSprop':
+    if name == 'rmsprop':
         optimizer = RMSprop(params, lr=0.004)
-    if name == 'Rprop':
+    if name == 'rprop':
         optimizer = Rprop(params)
-    if name == 'SGD':
+    if name == 'sgd':
         optimizer = SGD(params)
     
     if optimizer:

@@ -41,6 +41,11 @@ class FullAttacker(Attacker):
         det_targets = victims['detection'].make_targets(predictions, images)
         face_boxes = victims['detection'].get_face_boxes(predictions)
 
+        # Check if a box is empty, if so, use previous box or next box
+        for idx, box in enumerate(face_boxes):
+            if len(box) == 0:
+                face_boxes[idx] = face_boxes[idx-1][:]
+
         # Generate alignment targets
         # Get scales and centers of face boxes
         centers, scales = victims["alignment"]._get_scales_and_centers(face_boxes)
@@ -101,7 +106,7 @@ class FullAttacker(Attacker):
                 if det_loss.item()/batch_size > 1.0:
                     loss = lm_loss + det_loss
                 else:
-                    loss = lm_loss
+                    loss = lm_loss * 2.0
 
                 loss.backward()
 
