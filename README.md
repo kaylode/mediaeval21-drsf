@@ -35,11 +35,21 @@ def doit(batch):
            face_boxes[idx] = face_boxes[idx-1][:]
 
     # Generate deid images
-    adv_images = deid_fn.forward_batch([i.copy() for i in batch], face_boxes)
+    # adv_images = deid_fn.forward_batch([i.copy() for i in batch], face_boxes)
+    centers, scales = align_model._get_scales_and_centers(face_boxes)
 
-    # Full attack
+    adv_images = []
+    for cv2_image, center, scale in zip(batch, centers, scales):
+        _, old_box, _, _ = crop(cv2_image.copy(), center, scale, return_points=True)
+        deid_image = deid_fn(cv2_image.copy(), old_box)
+        adv_images.append(deid_image)
+
+    # Stage one, attack detection
     adv_lm_imgs = attacker.attack(
-        victims = [det_model, align_model], 
+        victims = {
+            'detection': det_model, 
+            'alignment': align_model
+        }, 
         images = batch, 
         deid_images = adv_images)
 
