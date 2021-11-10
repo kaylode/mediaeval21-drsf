@@ -1,9 +1,11 @@
 # Driving Road Safety Forward: Video Data Privacy
 
 ## Example use cases
+
 ### Non-targeted attack
 
 - Attack on batch
+
 ```python
 from attack.deid import Pixelate
 from models.face_align.fan import FANAlignment
@@ -19,7 +21,7 @@ deid_fn = Pixelate(15)
 def doit(batch):
     """
     Attack batch of images on detection and alignment models
-    :params: 
+    :params:
         batch: list of cv2 image
     :return: list of adversarial images
     """
@@ -47,29 +49,30 @@ def doit(batch):
     # Stage one, attack detection
     adv_lm_imgs = attacker.attack(
         victims = {
-            'detection': det_model, 
+            'detection': det_model,
             'alignment': align_model
-        }, 
-        images = batch, 
+        },
+        images = batch,
         deid_images = adv_images)
 
     return adv_lm_imgs
 ```
 
-| Original images | Predictions before deid | Predictions after deid |
-|:-------------------------:|:-------------------------:|:-------------------------:|
-|<img width="450" alt="screen" src="assets/results/ori.jpg"> | <img width="450" alt="screen" src="assets/results/raw.jpg"> | <img width="450" alt="screen" src="assets/results/deid.jpg"> |
-|<img width="450" alt="screen" src="assets/results/ori2.jpg"> | <img width="450" alt="screen" src="assets/results/raw2.jpg"> | <img width="450" alt="screen" src="assets/results/deid2.jpg"> |
-|<img width="450" alt="screen" src="assets/results/ori3.jpg"> | <img width="450" alt="screen" src="assets/results/raw3.jpg"> | <img width="450" alt="screen" src="assets/results/deid3.jpg"> |
-|<img width="450" alt="screen" src="assets/results/ori4.jpg"> | <img width="450" alt="screen" src="assets/results/raw4.jpg"> | <img width="450" alt="screen" src="assets/results/deid4.jpg"> |
-|<img width="450" alt="screen" src="assets/results/ori5.jpg"> | <img width="450" alt="screen" src="assets/results/raw5.jpg"> | <img width="450" alt="screen" src="assets/results/deid5.jpg"> |
-
+|                       Original images                        |                   Predictions before deid                    |                    Predictions after deid                     |
+| :----------------------------------------------------------: | :----------------------------------------------------------: | :-----------------------------------------------------------: |
+| <img width="450" alt="screen" src="assets/results/ori.jpg">  | <img width="450" alt="screen" src="assets/results/raw.jpg">  | <img width="450" alt="screen" src="assets/results/deid.jpg">  |
+| <img width="450" alt="screen" src="assets/results/ori2.jpg"> | <img width="450" alt="screen" src="assets/results/raw2.jpg"> | <img width="450" alt="screen" src="assets/results/deid2.jpg"> |
+| <img width="450" alt="screen" src="assets/results/ori3.jpg"> | <img width="450" alt="screen" src="assets/results/raw3.jpg"> | <img width="450" alt="screen" src="assets/results/deid3.jpg"> |
+| <img width="450" alt="screen" src="assets/results/ori4.jpg"> | <img width="450" alt="screen" src="assets/results/raw4.jpg"> | <img width="450" alt="screen" src="assets/results/deid4.jpg"> |
+| <img width="450" alt="screen" src="assets/results/ori5.jpg"> | <img width="450" alt="screen" src="assets/results/raw5.jpg"> | <img width="450" alt="screen" src="assets/results/deid5.jpg"> |
 
 ## Colab Notebooks
+
 - Pixelate Landmarks [![Notebook](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1nhtWSODf3UD7ptKLLzneAbE9MtRq-q-7?usp=sharing)
 - Adversarial Attack [![Notebook](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1BXiBrxdfAK2JEW2uU7ZshKLPbD4ZSXXb?usp=sharing)
 
 ## Code References
+
 - https://github.com/timesler/facenet-pytorch
 - https://github.com/1adrianb/face-alignment
 - https://github.com/hysts/pytorch_mpiigaze
