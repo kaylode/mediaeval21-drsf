@@ -17,7 +17,7 @@ class LandmarkEstimator:
         align_model = face_align.get_model(align_name)
         return cls(det_model, align_model)
 
-    def detect_faces(self, images: List) -> List[Face]:
+    def detect_faces(self, images: List):
 
         #  Get detection results
         results_norm = self.detector.preprocess(images)
