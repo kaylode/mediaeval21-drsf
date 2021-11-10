@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 
-class BaseEstimator(nn.Module):
+class BaseModel(nn.Module):
     """
     Base Detector abstract class
     """
