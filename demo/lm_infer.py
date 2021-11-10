@@ -50,8 +50,8 @@ if __name__ == "__main__":
             if (len(batch)) % BATCH_SIZE == 0 or frame_id == total_frames - 1:
 
                 face_boxes, landmarks = e.detect_faces(batch)
-                for adv_img, face_box, landmark in zip(batch, face_boxes, landmarks):
-                    image = adv_img.copy()
+                for im, face_box, landmark in zip(batch, face_boxes, landmarks):
+                    image = im.copy()
                     plot_box(image, face_box)
                     draw_points(image, landmark)
                     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
