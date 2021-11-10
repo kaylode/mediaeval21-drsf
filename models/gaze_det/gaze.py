@@ -30,15 +30,6 @@ class GazeModel(BaseModel):
         assert (
             config.mode == "MPIIGaze" or config.mode == "ETH-XGaze"
         ), "Only ETH-XGaze and MPIIGaze are supported"
-        self._face_model3d = get_3d_face_model(config)
-        self.camera = Camera(config.gaze_estimator.camera_params)
-        self._normalized_camera = Camera(config.gaze_estimator.normalized_camera_params)
-
-        self._head_pose_normalizer = HeadPoseNormalizer(
-            self.camera,
-            self._normalized_camera,
-            self._config.gaze_estimator.normalized_camera_distance,
-        )
         self._gaze_estimation_model = self._load_model()
         self._transform = create_transform(config)
 
@@ -76,42 +67,3 @@ class GazeModel(BaseModel):
         model.eval()
         return model
 
-
-if __name__ == "__main__":
-    test_params = {
-        "mode": "ETH-XGaze",
-        "device": "cpu",
-        "model": {"name": "resnet18"},
-        "face_detector": {
-            "mode": "mediapipe",
-            "dlib_model_path": "/home/nhtlong/.ptgaze/dlib/shape_predictor_68_face_landmarks.dat",
-            "mediapipe_max_num_faces": 3,
-        },
-        "gaze_estimator": {
-            "checkpoint": "/home/nhtlong/.ptgaze/models/eth-xgaze_resnet18.pth",
-            "camera_params": "/tmp/camera_params.yaml",
-            "use_dummy_camera_params": True,
-            "normalized_camera_params": "/home/nhtlong/workspace/mediaeval21/dr-ws/demo/data/normalized_camera_params/eth-xgaze.yaml",
-            "normalized_camera_distance": 0.6,
-            "image_size": [224, 224],
-        },
-        "demo": {
-            "use_camera": False,
-            "display_on_screen": False,
-            "wait_time": 1,
-            "image_path": None,
-            "video_path": "../assets/T002_ActionsShorter_mini_8829_9061_Talk-non-cell.mp4",
-            "output_dir": ".",
-            "output_file_extension": "avi",
-            "head_pose_axis_length": 0.05,
-            "gaze_visualization_length": 0.05,
-            "show_bbox": True,
-            "show_head_pose": True,
-            "show_landmarks": True,
-            "show_normalized_image": False,
-            "show_template_model": True,
-        },
-        "PACKAGE_ROOT": "/home/nhtlong/workspace/mediaeval21/dr-ws/demo",
-    }
-    config = DictConfig(test_params)
-    model = GazeModel(config)

@@ -19,6 +19,8 @@ from models.gaze_det.ptgaze.models import create_model
 from models.gaze_det.ptgaze.transforms import create_transform
 from models.gaze_det.ptgaze.utils import get_3d_face_model
 
+from models.gaze_det.ptgaze.common.face_model_68 import FaceModel68
+
 
 class Face3DModel(BaseModel):
     def __init__(self, config: DictConfig):
@@ -27,7 +29,7 @@ class Face3DModel(BaseModel):
         assert (
             config.mode == "MPIIGaze" or config.mode == "ETH-XGaze"
         ), "Only ETH-XGaze and MPIIGaze are supported"
-        self._face_model3d = get_3d_face_model(config)
+        self._face_model3d = FaceModel68()
         self.camera = Camera(config.gaze_estimator.camera_params)
         self._normalized_camera = Camera(config.gaze_estimator.normalized_camera_params)
 
@@ -53,21 +55,3 @@ class Face3DModel(BaseModel):
         face.denormalize_gaze_vector()
         return face
 
-
-if __name__ == "__main__":
-    test_params = {
-        "mode": "ETH-XGaze",
-        "model": {"name": "resnet18"},
-        "face_detector": {"mode": "Face68",},
-        "gaze_estimator": {
-            "checkpoint": "/home/nhtlong/.ptgaze/models/eth-xgaze_resnet18.pth",
-            "camera_params": "/tmp/camera_params.yaml",
-            "use_dummy_camera_params": True,
-            "normalized_camera_params": "/home/nhtlong/workspace/mediaeval21/dr-ws/demo/data/normalized_camera_params/eth-xgaze.yaml",
-            "normalized_camera_distance": 0.6,
-            "image_size": [224, 224],
-        },
-        "PACKAGE_ROOT": "/home/nhtlong/workspace/mediaeval21/dr-ws/demo",
-    }
-    config = DictConfig(test_params)
-    model = Face3DModel(config)
