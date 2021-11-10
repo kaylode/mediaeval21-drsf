@@ -32,20 +32,7 @@ class GazeEstimator:
     ) -> "GazeEstimator":
         det_model = face_det.get_model(det_name)
         align_model = face_align.get_model(align_name)
-        test_params = {
-            "mode": "ETH-XGaze",
-            "device": "cpu",
-            "model": {"name": "resnet18"},
-            "gaze_estimator": {
-                "checkpoint": "/home/nhtlong/.ptgaze/models/eth-xgaze_resnet18.pth",
-                "camera_params": "/tmp/camera_params.yaml",
-                "use_dummy_camera_params": True,
-                "normalized_camera_params": "/home/nhtlong/workspace/mediaeval21/dr-ws/demo/data/normalized_camera_params/eth-xgaze.yaml",
-                "normalized_camera_distance": 0.6,
-                "image_size": [224, 224],
-            },
-            "PACKAGE_ROOT": "/home/nhtlong/workspace/mediaeval21/dr-ws/demo",
-        }
+
         config = cfg
 
         face3d_model = gaze_det.get_model(face3d_name, config=config)

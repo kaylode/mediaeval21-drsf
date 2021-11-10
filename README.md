@@ -2,6 +2,22 @@
 
 ## Example use cases
 
+### Estimate landmarks of a video
+
+Move `lm_infer` in `demo/lm_infer.py` outside before running script.
+
+```bash
+PYTHONPATH=. python lm_infer.py
+```
+
+### Estimate gaze vector of a video
+
+Change default params in `demo/default_config.py` before running script.
+
+```bash
+PYTHONPATH=. python demo/infer.py
+```
+
 ### Non-targeted attack
 
 - Attack on batch
