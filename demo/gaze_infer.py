@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 # from models.gaze_det.ptgaze.gaze_estimator import GazeEstimator
 from estimators.gaze import GazeEstimator
+from models.gaze_det.ptgaze.common.face_model_68 import FaceModel68
 
 
 class Demo:
@@ -30,9 +31,10 @@ class Demo:
             align_name="fan",
             face3d_name="Face3DModel",
             gaze_name="GazeModel",
+            cfg=config,
         )
 
-        face_model_3d = get_3d_face_model(config)
+        face_model_3d = FaceModel68()
         self.visualizer = Visualizer(
             self.gaze_estimator.camera, face_model_3d.NOSE_INDEX
         )
@@ -255,47 +257,27 @@ class Demo:
 
 
 if __name__ == "__main__":
-    test_params = {
-        "mode": "ETH-XGaze",
-        "device": "cpu",
-        "model": {"name": "resnet18"},
-        "face_detector": {
-            "mode": "dlib",
-            "dlib_model_path": "/home/nhtlong/.ptgaze/dlib/shape_predictor_68_face_landmarks.dat",
-            "mediapipe_max_num_faces": 3,
-        },
-        "gaze_estimator": {
-            "checkpoint": "/home/nhtlong/.ptgaze/models/eth-xgaze_resnet18.pth",
-            "camera_params": "/tmp/camera_params.yaml",
-            "use_dummy_camera_params": True,
-            "normalized_camera_params": "/home/nhtlong/workspace/mediaeval21/dr-ws/demo/data/normalized_camera_params/eth-xgaze.yaml",
-            "normalized_camera_distance": 0.6,
-            "image_size": [224, 224],
-        },
-        "demo": {
-            "use_camera": False,
-            "display_on_screen": False,
-            "wait_time": 1,
-            "image_path": None,
-            "video_path": "./assets/T002_ActionsShorter_mini_8829_9061_Talk-non-cell.mp4",
-            "output_dir": ".",
-            "output_file_extension": "avi",
-            "head_pose_axis_length": 0.05,
-            "gaze_visualization_length": 0.05,
-            "show_bbox": True,
-            "show_head_pose": True,
-            "show_landmarks": False,
-            "show_normalized_image": False,
-            "show_template_model": False,
-        },
-        "PACKAGE_ROOT": "/home/nhtlong/workspace/mediaeval21/dr-ws/demo",
-    }
-    config = DictConfig(test_params)
-    from models.gaze_det.ptgaze.utils import generate_dummy_camera_params
+    from default_config import config
+    from models.gaze_det.ptgaze.utils import (
+        check_path_all,
+        download_dlib_pretrained_model,
+        download_ethxgaze_model,
+        download_mpiifacegaze_model,
+        download_mpiigaze_model,
+        expanduser_all,
+        generate_dummy_camera_params,
+    )
 
     if config.gaze_estimator.use_dummy_camera_params:
         generate_dummy_camera_params(config)
+    if config.mode == "MPIIGaze":
+        download_mpiigaze_model()
+    elif config.mode == "MPIIFaceGaze":
+        download_mpiifacegaze_model()
+    elif config.mode == "ETH-XGaze":
+        download_ethxgaze_model()
 
+    check_path_all(config)
     demo = Demo(config)
     demo.run()
 
