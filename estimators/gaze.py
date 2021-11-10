@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List
+from typing import Dict, List
 
 import torch
 from models import face_align, face_det, gaze_det
@@ -23,7 +23,12 @@ class GazeEstimator:
 
     @classmethod
     def from_name(
-        cls, det_name: str, align_name: str, face3d_name: str, gaze_name: str
+        cls,
+        det_name: str,
+        align_name: str,
+        face3d_name: str,
+        gaze_name: str,
+        cfg: DictConfig,
     ) -> "GazeEstimator":
         det_model = face_det.get_model(det_name)
         align_model = face_align.get_model(align_name)
@@ -31,11 +36,6 @@ class GazeEstimator:
             "mode": "ETH-XGaze",
             "device": "cpu",
             "model": {"name": "resnet18"},
-            "face_detector": {
-                "mode": "dlib",
-                "dlib_model_path": "/home/nhtlong/.ptgaze/dlib/shape_predictor_68_face_landmarks.dat",
-                "mediapipe_max_num_faces": 3,
-            },
             "gaze_estimator": {
                 "checkpoint": "/home/nhtlong/.ptgaze/models/eth-xgaze_resnet18.pth",
                 "camera_params": "/tmp/camera_params.yaml",
@@ -44,25 +44,9 @@ class GazeEstimator:
                 "normalized_camera_distance": 0.6,
                 "image_size": [224, 224],
             },
-            "demo": {
-                "use_camera": False,
-                "display_on_screen": False,
-                "wait_time": 1,
-                "image_path": None,
-                "video_path": "./assets/T002_ActionsShorter_mini_8829_9061_Talk-non-cell.mp4",
-                "output_dir": ".",
-                "output_file_extension": "avi",
-                "head_pose_axis_length": 0.05,
-                "gaze_visualization_length": 0.05,
-                "show_bbox": True,
-                "show_head_pose": True,
-                "show_landmarks": True,
-                "show_normalized_image": True,
-                "show_template_model": True,
-            },
             "PACKAGE_ROOT": "/home/nhtlong/workspace/mediaeval21/dr-ws/demo",
         }
-        config = DictConfig(test_params)
+        config = cfg
 
         face3d_model = gaze_det.get_model(face3d_name, config=config)
         gaze_model = gaze_det.get_model(gaze_name, config=config)
