@@ -22,7 +22,7 @@ def fixed_batch_process(im_data, model):
 
     return tuple(torch.cat(v, dim=0) for v in zip(*out))
 
-def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, multiscale=False):
+def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, target_feats=None):
     if isinstance(imgs, (np.ndarray, torch.Tensor)):
         if isinstance(imgs,np.ndarray):
             imgs = torch.as_tensor(imgs.copy(), device=device)
@@ -40,6 +40,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, mult
         imgs = np.stack([np.uint8(img) for img in imgs])
         imgs = torch.as_tensor(imgs.copy(), device=device)
 
+    
 
     model_dtype = next(pnet.parameters()).dtype
     imgs = imgs.float()
@@ -58,9 +59,6 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, mult
         scale_i = scale_i * factor
         minl = minl * factor
 
-    if multiscale:
-        multiscale_boxes = []
-
     # First stage
     boxes = []
     image_inds = []
@@ -69,10 +67,16 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, mult
 
     all_i = 0
     offset = 0
-    for scale in scales:
+    stage_1_regs = []
+    for idx, scale in enumerate(scales):
         im_data = imresample(imgs, (int(h * scale + 1), int(w * scale + 1)))
         # im_data = (im_data - 127.5) * 0.0078125
         reg, probs = pnet(im_data)
+        stage_1_regs.append([reg, probs])
+
+        if target_feats is not None:
+            reg = target_feats[0][idx][0]
+            probs = target_feats[0][idx][1]
     
         boxes_scale, image_inds_scale = generateBoundingBox(reg, probs[:, 1], scale, threshold[0])
         boxes.append(boxes_scale)
@@ -105,9 +109,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, mult
     boxes = rerec(boxes)
     y, ey, x, ex = pad(boxes, w, h)
     
-    if multiscale and len(boxes) > 0:
-        multiscale_boxes.append(boxes[0, :])
-
+    stage_2_regs = []
     # Second stage
     if len(boxes) > 0:
         im_data = []
@@ -120,6 +122,10 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, mult
 
         # This is equivalent to out = rnet(im_data) to avoid GPU out of memory.
         out = fixed_batch_process(im_data, rnet)
+        stage_2_regs.append(out)
+
+        if target_feats is not None:
+            out = target_feats[1][0]
 
         out0 = out[0].permute(1, 0)
         out1 = out[1].permute(1, 0)
@@ -135,9 +141,7 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, mult
         boxes = bbreg(boxes, mv)
         boxes = rerec(boxes)
 
-        if multiscale and len(boxes) > 0:
-            multiscale_boxes.append(boxes[0, :])
-
+    stage_3_regs = []
     # Third stage
     points = torch.zeros(0, 5, 2, device=device)
     if len(boxes) > 0:
@@ -152,6 +156,10 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, mult
         
         # This is equivalent to out = onet(im_data) to avoid GPU out of memory.
         out = fixed_batch_process(im_data, onet)
+        stage_3_regs.append(out)
+
+        if target_feats is not None:
+            out = target_feats[2][0]
 
         out0 = out[0].permute(1, 0)
         out1 = out[1].permute(1, 0)
@@ -176,14 +184,20 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, mult
         # pick = batched_nms_numpy(boxes[:, :4], boxes[:, 4], image_inds, 0.7, 'Min')
         boxes, image_inds, points = boxes[pick], image_inds[pick], points[pick]
 
-        if multiscale:
-            if len(boxes) > 0:
-                multiscale_boxes.append(boxes[0, :])
-            multiscale_boxes = torch.stack(multiscale_boxes, dim=0)
-            return multiscale_boxes, points
-            
+    boxes = boxes.detach().cpu().numpy()
+    points = points.detach().cpu().numpy()
+    image_inds = image_inds.detach().cpu()
 
-    return boxes, points
+    batch_boxes = []
+    batch_points = []
+    for b_i in range(batch_size):
+        b_i_inds = np.where(image_inds == b_i)
+        batch_boxes.append(boxes[b_i_inds].copy())
+        batch_points.append(points[b_i_inds].copy())
+
+    batch_boxes, batch_points = np.array(batch_boxes), np.array(batch_points)
+    return batch_boxes, batch_points, tuple([stage_1_regs,stage_2_regs,stage_3_regs])
+
 
 def bbreg(boundingbox, reg):
     if reg.shape[1] == 1:

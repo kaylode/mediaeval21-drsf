@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 
 import numpy as np
-from PIL import Image
 
 from .base import BaseDetector
 from .models.facenet import MTCNN
@@ -42,33 +41,26 @@ class MTCNNDetector(BaseDetector):
             keep_all=False,
         )
 
-    def preprocess(self, cv2_image):
-        ## FIX THIS
-        pil_image = Image.fromarray(cv2_image)
-        np_image = np.uint8(pil_image)
-        normalized = fixed_image_standardization(np_image)
+    def preprocess(self, images):
+        images = np.stack(images, axis=0)
+        normalized = fixed_image_standardization(images)
         return normalized
 
-    def postprocess(self, image):
-        image = image.detach().numpy()
-        unnormalized = np.clip(image * 128.0 + 127.5, 0, 255).astype(np.uint8)
-        cv2_image = unnormalized.squeeze().transpose((1, 2, 0))
-        return cv2_image
+    def postprocess(self, images):
+        images = images.detach().numpy()
+        unnormalized = np.clip(images * 128.0 + 127.5, 0, 255).astype(np.uint8)
+        images = unnormalized.transpose((0, 2, 3, 1))
+        return images
 
-    def forward(self, imgs, target_bboxes):
-        n = target_bboxes.shape[0]
-        if n != 1:
-            raise ValueError("Currently only batch size 1 is supported.")
-        adv_det, adv_points = self.model.forward(imgs)
-        # faces = model.extract(image, boxes, save_path=None)
-        adv_scores = adv_det[:, -1]
-        adv_bboxes = adv_det[:, :-1]
-
-        num_preds = adv_bboxes.shape[0]
-        target_bboxes = target_bboxes.repeat(num_preds, 1)
+    def forward(self, imgs, target_feats):
+        adv_det, adv_points, feats = self.model.forward(imgs, target_feats)
 
         # Regression loss
-        loss = self.loss_fn(adv_bboxes, target_bboxes)
+        loss = 0
+        for stage_feat, stage_target_feat in zip(feats, target_feats):
+            for feat, target_feat in zip(stage_feat, stage_target_feat):
+                for f, t in zip(feat, target_feat):
+                    loss += self.loss_fn(f, t)
         return loss
 
     def detect(self, x):
@@ -77,17 +69,24 @@ class MTCNNDetector(BaseDetector):
             x_tensor = x_tensor.unsqueeze(0)
 
         with torch.no_grad():
-            _bboxes, _points = self.model.detect(
+            _bboxes, _points, feats = self.model.detect(
                 x_tensor
             )  # xmin, ymin, xmax, ymax, scores
-        return _bboxes
 
-    def make_targets(self, predictions, image):
-        return torch.from_numpy(predictions[:, :-1]).cuda()
+        return _bboxes, feats
 
-    def get_face_box(self, predictions, return_probs=False):
-        bboxes = predictions
-        face_box = bboxes.squeeze(0).astype(np.int).tolist()
-        if not return_probs:
-            face_box = face_box[:-1]
-        return face_box
+    def make_targets(self, predictions, images):
+        return predictions[1]
+
+    def get_face_boxes(self, predictions, return_probs=False):
+        batch_bboxes = predictions[0]
+        face_boxes = []
+        for bboxes in batch_bboxes:
+            if bboxes.shape[0] == 0:
+                face_box = []
+            else:
+                face_box = bboxes.squeeze(0).astype(np.int).tolist()
+            if not return_probs:
+                face_box = face_box[:-1]
+            face_boxes.append(face_box)
+        return face_boxes

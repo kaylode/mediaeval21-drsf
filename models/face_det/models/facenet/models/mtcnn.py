@@ -223,18 +223,18 @@ class MTCNN(nn.Module):
         if not self.selection_method:
             self.selection_method = 'largest' if self.select_largest else 'probability'
 
-    def forward(self, img):
+    def forward(self, img, target_feats):
         """
         Forward
         """
-        batch_boxes, batch_points = detect_face(
+        batch_boxes, batch_points, feats = detect_face(
             img, self.min_face_size,
             self.pnet, self.rnet, self.onet,
-            [0.3, 0.3, 0.4], self.factor,
-            self.device, multiscale = True
+            self.thresholds, self.factor,
+            self.device, target_feats=target_feats
         )
 
-        return batch_boxes, batch_points
+        return batch_boxes, batch_points, feats
 
         
 
@@ -279,22 +279,14 @@ class MTCNN(nn.Module):
         """
 
         with torch.no_grad():
-            batch_boxes, batch_points = detect_face(
+            batch_boxes, batch_points, gt_feats = detect_face(
                 img, self.min_face_size,
                 self.pnet, self.rnet, self.onet,
                 self.thresholds, self.factor,
-                self.device, multiscale=True
+                self.device
             )
 
-        batch_boxes = batch_boxes.cpu().numpy()
-        batch_points = batch_points.cpu().numpy()
-        batch_boxes = batch_boxes[batch_boxes[:, -1].argsort()][::-1]
-        if self.select_largest and len(batch_boxes) > 0:
-            if len(batch_boxes) > 0:
-                batch_boxes = np.expand_dims(batch_boxes[0, :], axis=0)
-            if len(batch_points) > 0:
-                batch_points = np.expand_dims(batch_points[0, :], axis=0)
-        return batch_boxes, batch_points
+        return batch_boxes, batch_points, gt_feats
 
     def select_boxes(
         self, all_boxes, all_probs, all_points, imgs, method='probability', threshold=0.9,
