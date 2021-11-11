@@ -50,9 +50,7 @@ def download_dlib_pretrained_model() -> None:
 
 def download_mpiigaze_model() -> pathlib.Path:
     logger.debug("Called _download_mpiigaze_model()")
-    output_dir = pathlib.Path("~/.ptgaze/models/").expanduser()
-    output_dir.mkdir(exist_ok=True, parents=True)
-    output_path = output_dir / "mpiigaze_resnet_preact.pth"
+    output_path = "demo/pretrained/mpiigaze_resnet_preact.pth"
     if not output_path.exists():
         logger.debug("Download the pretrained model")
         torch.hub.download_url_to_file(
@@ -66,9 +64,7 @@ def download_mpiigaze_model() -> pathlib.Path:
 
 def download_mpiifacegaze_model() -> pathlib.Path:
     logger.debug("Called _download_mpiifacegaze_model()")
-    output_dir = pathlib.Path("~/.ptgaze/models/").expanduser()
-    output_dir.mkdir(exist_ok=True, parents=True)
-    output_path = output_dir / "mpiifacegaze_resnet_simple.pth"
+    output_path = "demo/pretrained/mpiifacegaze_resnet_simple.pth"
     if not output_path.exists():
         logger.debug("Download the pretrained model")
         torch.hub.download_url_to_file(
@@ -82,9 +78,7 @@ def download_mpiifacegaze_model() -> pathlib.Path:
 
 def download_ethxgaze_model() -> pathlib.Path:
     logger.debug("Called _download_ethxgaze_model()")
-    output_dir = pathlib.Path("~/.ptgaze/models/").expanduser()
-    output_dir.mkdir(exist_ok=True, parents=True)
-    output_path = output_dir / "eth-xgaze_resnet18.pth"
+    output_path = "demo/pretrained/eth-xgaze_resnet18.pth"
     if not output_path.exists():
         logger.debug("Download the pretrained model")
         torch.hub.download_url_to_file(
