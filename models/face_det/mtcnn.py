@@ -11,30 +11,39 @@ from PIL import Image
 from .base import BaseDetector
 from .models.facenet import MTCNN
 
+
 def fixed_image_standardization(image_tensor):
     processed_tensor = (image_tensor - 127.5) / 128.0
     return processed_tensor
 
-class MTCNNDetector(BaseDetector):
-    def __init__(self, image_size=160, thresholds=[0.6, 0.7, 0.7], loss_fn='l2'):
-        super(MTCNNDetector, self).__init__()
-        
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-        if loss_fn == 'l2':
+class MTCNNDetector(BaseDetector):
+    def __init__(self, image_size=160, thresholds=[0.6, 0.7, 0.7], loss_fn="l2"):
+        super(MTCNNDetector, self).__init__()
+
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        if loss_fn == "l2":
             self.loss_fn = nn.MSELoss()
-        elif loss_fn == 'l1':
+        elif loss_fn == "l1":
             self.loss_fn = nn.SmoothL1Loss()
         else:
-            raise ValueError('Loss function does not exist')
+            raise ValueError("Loss function does not exist")
 
         self.model = MTCNN(
-            image_size=image_size, margin=0, min_face_size=20, select_largest =True,
-            thresholds=thresholds, factor=0.709, post_process=True,
-            device=device, keep_all=False
+            image_size=image_size,
+            margin=0,
+            min_face_size=20,
+            select_largest=True,
+            thresholds=thresholds,
+            factor=0.709,
+            post_process=True,
+            device=device,
+            keep_all=False,
         )
 
     def preprocess(self, cv2_image):
+        ## FIX THIS
         pil_image = Image.fromarray(cv2_image)
         np_image = np.uint8(pil_image)
         normalized = fixed_image_standardization(np_image)
@@ -43,13 +52,13 @@ class MTCNNDetector(BaseDetector):
     def postprocess(self, image):
         image = image.detach().numpy()
         unnormalized = np.clip(image * 128.0 + 127.5, 0, 255).astype(np.uint8)
-        cv2_image = unnormalized.squeeze().transpose((1,2,0))
+        cv2_image = unnormalized.squeeze().transpose((1, 2, 0))
         return cv2_image
 
     def forward(self, imgs, target_bboxes):
         n = target_bboxes.shape[0]
         if n != 1:
-            raise ValueError('Currently only batch size 1 is supported.')
+            raise ValueError("Currently only batch size 1 is supported.")
         adv_det, adv_points = self.model.forward(imgs)
         # faces = model.extract(image, boxes, save_path=None)
         adv_scores = adv_det[:, -1]
@@ -68,7 +77,9 @@ class MTCNNDetector(BaseDetector):
             x_tensor = x_tensor.unsqueeze(0)
 
         with torch.no_grad():
-            _bboxes, _points = self.model.detect(x_tensor) # xmin, ymin, xmax, ymax, scores
+            _bboxes, _points = self.model.detect(
+                x_tensor
+            )  # xmin, ymin, xmax, ymax, scores
         return _bboxes
 
     def make_targets(self, predictions, image):

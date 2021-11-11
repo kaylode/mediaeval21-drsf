@@ -28,6 +28,7 @@ class FaceModel:
         # face is in front of the camera.
         rvec = np.zeros(3, dtype=np.float)
         tvec = np.array([0, 0, 1], dtype=np.float)
+
         _, rvec, tvec = cv2.solvePnP(
             self.LANDMARKS,
             face.landmarks,

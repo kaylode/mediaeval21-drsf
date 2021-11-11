@@ -13,6 +13,49 @@ from .utils import get_3d_face_model
 
 logger = logging.getLogger(__name__)
 
+"""
+{
+'mode': 'ETH-XGaze', 
+'device': 'cpu', 
+'model': 
+{
+    'name': 'resnet18'
+}, 
+'face_detector': 
+{
+    'mode': 'mediapipe', 
+    'dlib_model_path': '/home/nhtlong/.ptgaze/dlib/shape_predictor_68_face_landmarks.dat', 
+    'mediapipe_max_num_faces': 3
+}, 
+'gaze_estimator': 
+{
+    'checkpoint': '/home/nhtlong/.ptgaze/models/eth-xgaze_resnet18.pth', 
+    'camera_params': '/tmp/camera_params.yaml', 
+    'use_dummy_camera_params': True, 
+    'normalized_camera_params': '/home/nhtlong/workspace/mediaeval21/dr-ws/demo/data/normalized_camera_params/eth-xgaze.yaml', 
+    'normalized_camera_distance': 0.6, 'image_size': [224, 224]
+}, 
+'demo': 
+{
+    'use_camera': False, 
+    'display_on_screen': False, 
+    'wait_time': 1, 
+    'image_path': None, 
+    'video_path': '../assets/T002_ActionsShorter_mini_8829_9061_Talk-non-cell.mp4', 
+    'output_dir': '.', 
+    'output_file_extension': 'avi', 
+    'head_pose_axis_length': 0.05, 
+    'gaze_visualization_length': 0.05, 
+    'show_bbox': True, 
+    'show_head_pose': False, 
+    'show_landmarks': False, 
+    'show_normalized_image': False, 
+    'show_template_model': False
+}, 
+'PACKAGE_ROOT': '/home/nhtlong/workspace/mediaeval21/dr-ws/demo'
+}
+"""
+
 
 class GazeEstimator:
     EYE_KEYS = [FacePartsName.REYE, FacePartsName.LEYE]
@@ -23,21 +66,23 @@ class GazeEstimator:
         self._face_model3d = get_3d_face_model(config)
 
         self.camera = Camera(config.gaze_estimator.camera_params)
-        self._normalized_camera = Camera(
-            config.gaze_estimator.normalized_camera_params)
+        self._normalized_camera = Camera(config.gaze_estimator.normalized_camera_params)
 
         self._landmark_estimator = LandmarkEstimator(config)
         self._head_pose_normalizer = HeadPoseNormalizer(
-            self.camera, self._normalized_camera,
-            self._config.gaze_estimator.normalized_camera_distance)
+            self.camera,
+            self._normalized_camera,
+            self._config.gaze_estimator.normalized_camera_distance,
+        )
         self._gaze_estimation_model = self._load_model()
         self._transform = create_transform(config)
 
     def _load_model(self) -> torch.nn.Module:
         model = create_model(self._config)
-        checkpoint = torch.load(self._config.gaze_estimator.checkpoint,
-                                map_location='cpu')
-        model.load_state_dict(checkpoint['model'])
+        checkpoint = torch.load(
+            self._config.gaze_estimator.checkpoint, map_location="cpu"
+        )
+        model.load_state_dict(checkpoint["model"])
         model.to(torch.device(self._config.device))
         model.eval()
         return model
@@ -50,15 +95,15 @@ class GazeEstimator:
         self._face_model3d.compute_3d_pose(face)
         self._face_model3d.compute_face_eye_centers(face, self._config.mode)
 
-        if self._config.mode == 'MPIIGaze':
+        if self._config.mode == "MPIIGaze":
             for key in self.EYE_KEYS:
                 eye = getattr(face, key.name.lower())
                 self._head_pose_normalizer.normalize(image, eye)
             self._run_mpiigaze_model(face)
-        elif self._config.mode == 'MPIIFaceGaze':
+        elif self._config.mode == "MPIIFaceGaze":
             self._head_pose_normalizer.normalize(image, face)
             self._run_mpiifacegaze_model(face)
-        elif self._config.mode == 'ETH-XGaze':
+        elif self._config.mode == "ETH-XGaze":
             self._head_pose_normalizer.normalize(image, face)
             self._run_ethxgaze_model(face)
         else:

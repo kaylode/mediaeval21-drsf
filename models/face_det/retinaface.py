@@ -13,6 +13,7 @@ from .models.retinaface.models.retinaface import retinaface_mnet
 from .models.retinaface.layers.modules.multibox_loss import MultiBoxLoss
 from .models.retinaface.layers.functions.prior_box import PriorBox
 
+
 class DetectionLoss(nn.Module):
     def __init__(self, cfg, image_size):
         super(DetectionLoss, self).__init__()
@@ -25,7 +26,7 @@ class DetectionLoss(nn.Module):
     def forward(self, predictions, targets):
         self.priorbox = self.priorbox.to(predictions[0].device)
         loss_l, loss_c, _ = self.multiboxloss(predictions, self.priorbox, targets)
-        return  self.cfg['loc_weight'] * loss_l + loss_c
+        return self.cfg["loc_weight"] * loss_l + loss_c
 
 
 class RetinaFaceDetector(BaseDetector):
@@ -36,7 +37,7 @@ class RetinaFaceDetector(BaseDetector):
         self.model.eval()
         self.config = self.model.cfg
 
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = self.model.to(self.device)
 
     def preprocess(self, images):
@@ -44,19 +45,19 @@ class RetinaFaceDetector(BaseDetector):
         return images
 
     def postprocess(self, images):
-        images = images.detach().numpy().transpose((0,2,3,1))
-        images = (images*255).astype(np.uint8)
+        images = images.detach().numpy().transpose((0, 2, 3, 1))
+        images = (images * 255).astype(np.uint8)
         return images
 
     def forward(self, imgs, target_bboxes):
-        loss_fn = DetectionLoss(self.config, image_size = imgs.shape[-2:])
-        
+        loss_fn = DetectionLoss(self.config, image_size=imgs.shape[-2:])
+
         if len(imgs.shape) == 3:
             imgs = imgs.unsqueeze(0)
         imgs = imgs.to(self.device)
         predictions = self.model.forward(imgs)
         # Multibox loss
-        loss = loss_fn(predictions, target_bboxes) 
+        loss = loss_fn(predictions, target_bboxes)
         return loss
 
     def detect(self, x):
@@ -66,7 +67,7 @@ class RetinaFaceDetector(BaseDetector):
         x_tensor = x_tensor.to(self.device)
 
         with torch.no_grad():
-            results = self.model.detect(x_tensor) # xmin, ymin, xmax, ymax, scores
+            results = self.model.detect(x_tensor)  # xmin, ymin, xmax, ymax, scores
         return results
 
     def make_targets(self, predictions, images):

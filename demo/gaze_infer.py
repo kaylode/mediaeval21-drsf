@@ -6,13 +6,17 @@ from typing import Optional
 import cv2
 import numpy as np
 from omegaconf import DictConfig
+from models.gaze_det import gaze
 
-from .common import Face, FacePartsName, Visualizer
-from .gaze_estimator import GazeEstimator
-from .utils import get_3d_face_model
+from models.gaze_det.ptgaze.common import Face, FacePartsName, Visualizer
+from models.gaze_det.ptgaze.utils import get_3d_face_model
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# from models.gaze_det.ptgaze.gaze_estimator import GazeEstimator
+from estimators.gaze import GazeEstimator
+from models.gaze_det.ptgaze.common.face_model_68 import FaceModel68
 
 
 class Demo:
@@ -20,8 +24,17 @@ class Demo:
 
     def __init__(self, config: DictConfig):
         self.config = config
-        self.gaze_estimator = GazeEstimator(config)
-        face_model_3d = get_3d_face_model(config)
+
+        # self.gaze_estimator = GazeEstimator(config)
+        self.gaze_estimator = GazeEstimator.from_name(
+            det_name="retinaface",
+            align_name="fan",
+            face3d_name="Face3DModel",
+            gaze_name="GazeModel",
+            cfg=config,
+        )
+
+        face_model_3d = FaceModel68()
         self.visualizer = Visualizer(
             self.gaze_estimator.camera, face_model_3d.NOSE_INDEX
         )
@@ -80,11 +93,13 @@ class Demo:
             self.writer.release()
 
     def _process_image(self, image) -> None:
+        undistorted = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         undistorted = cv2.undistort(
-            image,
+            undistorted,
             self.gaze_estimator.camera.camera_matrix,
             self.gaze_estimator.camera.dist_coefficients,
         )
+        undistorted = [undistorted]
 
         self.visualizer.set_image(image.copy())
         faces = self.gaze_estimator.detect_faces(undistorted)
@@ -239,4 +254,30 @@ class Demo:
             logger.info(f"[face] pitch: {pitch:.2f}, yaw: {yaw:.2f}")
         else:
             raise ValueError
+
+
+if __name__ == "__main__":
+    from default_config import config
+    from models.gaze_det.ptgaze.utils import (
+        check_path_all,
+        download_dlib_pretrained_model,
+        download_ethxgaze_model,
+        download_mpiifacegaze_model,
+        download_mpiigaze_model,
+        expanduser_all,
+        generate_dummy_camera_params,
+    )
+
+    if config.gaze_estimator.use_dummy_camera_params:
+        generate_dummy_camera_params(config)
+    if config.mode == "MPIIGaze":
+        download_mpiigaze_model()
+    elif config.mode == "MPIIFaceGaze":
+        download_mpiifacegaze_model()
+    elif config.mode == "ETH-XGaze":
+        download_ethxgaze_model()
+
+    check_path_all(config)
+    demo = Demo(config)
+    demo.run()
 
