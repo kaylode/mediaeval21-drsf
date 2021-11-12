@@ -1,26 +1,12 @@
-"""
-"""
 
 from omegaconf.dictconfig import DictConfig
 import torch
 import torch.nn as nn
-
 import numpy as np
 
-
 from models.gaze_det.base import BaseModel
-
-
-from models.gaze_det.base import BaseModel
-
-from models.gaze_det.ptgaze.common import Camera, Face, FacePartsName
-from models.gaze_det.ptgaze.head_pose_estimation import (
-    HeadPoseNormalizer,
-    LandmarkEstimator,
-)
 from models.gaze_det.ptgaze.models import create_model
 from models.gaze_det.ptgaze.transforms import create_transform
-from models.gaze_det.ptgaze.utils import get_3d_face_model
 from .face3d import Face3DModel
 
 class GazeModelTest(BaseModel):
@@ -33,6 +19,7 @@ class GazeModelTest(BaseModel):
         self._gaze_estimation_model = self._load_model()
         self._face3d = Face3DModel(config)
         self._transform = create_transform(config)
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         if loss_fn == "l2":
             self.loss_fn = nn.MSELoss()
@@ -41,7 +28,7 @@ class GazeModelTest(BaseModel):
         else:
             raise ValueError("Loss function does not exist")
 
-    def preprocess(self, images, boxes, landmarks):
+    def preprocess(self, images, boxes, landmarks, return_faces=False):
         face_ls = []
         for bbox, lm in zip(boxes, landmarks):
             bbox = np.array([[bbox[0], bbox[1]], [bbox[2], bbox[3]]], dtype=np.float,)
@@ -55,17 +42,19 @@ class GazeModelTest(BaseModel):
             batch_inputs.append(input_image)
 
         batch_inputs = torch.stack(batch_inputs, dim=0)
-        return batch_inputs
+        if return_faces:
+            return batch_inputs, face_ls
+        else:
+            return batch_inputs
 
     def postprocess(self, prediction, face):
         pass
 
-    def forward(self, images, targets=None):
+    def forward(self, images, targets):
 
         preds = self._gaze_estimation_model.forward(images)
         # Regression loss
-        if targets is not None:
-            loss = self.loss_fn(preds, targets)
+        loss = self.loss_fn(preds, targets)
         return loss
 
     def detect(self, x):
@@ -74,11 +63,16 @@ class GazeModelTest(BaseModel):
         return preds.cpu().detach().numpy()
 
     def make_targets(self, predictions):
-        return torch.from_numpy(predictions[0]).to(self.device)
+        return torch.from_numpy(predictions).to(self.device)
 
-    def get_gaze_vector(self, predictions, face):
-        face = self._face3d.postprocess(predictions, face)
-        return face.center, face.gaze_vector
+    def get_gaze_vector(self, predictions, faces):
+        centers = []
+        vectors = []
+        for pred, face in zip(predictions, faces):
+            face = self._face3d.postprocess([pred], face)
+            centers.append(face.center)
+            vectors.append(face.gaze_vector)
+        return centers, vectors
 
     def _load_model(self) -> torch.nn.Module:
         model = create_model(self._config)
