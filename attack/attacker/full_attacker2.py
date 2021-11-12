@@ -63,8 +63,10 @@ class FullAttacker2(Attacker):
         lm_targets = victims["alignment"].make_targets(predictions)
         landmarks = victims["alignment"].get_landmarks(predictions)
 
+        landmarks = [lm.numpy() for lm in landmarks]
         # Generate gaze targets
         query = victims["gaze"].preprocess(images, face_boxes, landmarks)
+
         predictions = victims["gaze"].detect(query)
         gaze_targets = victims["gaze"].make_targets(predictions)
 
@@ -114,13 +116,13 @@ class FullAttacker2(Attacker):
 
                 # Forward alignment model
                 lm_loss = victims["alignment"](lm_inputs, targets["alignment"])
-
+                
                 # Generate tensors for gaze model
-                gaze_inputs = victims["gaze"].preprocess(deid, targets["gaze_boxes"], targets["gaze_landmarks"])
+                gaze_inputs = victims["gaze"].preprocess(att_imgs, targets["gaze_boxes"], targets["gaze_landmarks"])
                 gaze_loss = victims["gaze"](gaze_inputs, targets["gaze"])
 
                 # Sum up loss
-                loss = lm_loss*0.2 + det_loss*0.7 + gaze_loss*0.1
+                loss = lm_loss*0.35 + det_loss*0.55 + gaze_loss*0.2
                 loss.backward()
 
             if mask is not None:
