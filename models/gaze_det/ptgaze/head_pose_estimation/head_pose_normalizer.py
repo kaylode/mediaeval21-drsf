@@ -1,10 +1,11 @@
 import cv2
+from numpy.lib.arraysetops import isin
 import torch
 import numpy as np
 from scipy.spatial.transform import Rotation
 import kornia
 from ..common import Camera, FaceParts, FacePartsName
-
+from typing import Union
 
 def _normalize_vector(vector: np.ndarray) -> np.ndarray:
     return vector / np.linalg.norm(vector)
@@ -18,11 +19,15 @@ class HeadPoseNormalizer:
         self.normalized_camera = normalized_camera
         self.normalized_distance = normalized_distance
 
-    def normalize(self, image: np.ndarray, eye_or_face: FaceParts) -> None:
+    def normalize(self, image: Union[np.ndarray, torch.Tensor], eye_or_face: FaceParts) -> None:
         eye_or_face.normalizing_rot = self._compute_normalizing_rotation(
             eye_or_face.center, eye_or_face.head_pose_rot
         )
-        self._normalize_image(image, eye_or_face)
+
+        if isinstance(image, torch.Tensor):
+            self._normalize_image_tensor(image, eye_or_face)
+        else:
+            self._normalize_image(image, eye_or_face)
         self._normalize_head_pose(eye_or_face)
 
     def _normalize_image(self, image: np.ndarray, eye_or_face: FaceParts) -> None:

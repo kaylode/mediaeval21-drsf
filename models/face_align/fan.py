@@ -114,3 +114,6 @@ class FANAlignment(BaseAlignment):
 
     def make_targets(self, predictions):
         return torch.from_numpy(predictions[0]).to(self.device)
+
+    def get_landmarks(self, predictions):
+        return predictions[1]
