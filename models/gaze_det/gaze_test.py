@@ -50,17 +50,15 @@ class GazeModelTest(BaseModel):
 
         batch_inputs = []
         for image, face in zip(images, face_ls):
-            face = self._face3d.forward(image, face)[0]
-            input_image = self._transform(face.normalized_image).unsqueeze(0)
+            face = self._face3d.forward(image, face)
+            input_image = self._transform(face.normalized_image)
             batch_inputs.append(input_image)
 
         batch_inputs = torch.stack(batch_inputs, dim=0)
         return batch_inputs
 
     def postprocess(self, prediction, face):
-        face.normalized_gaze_angles = prediction[0]
-        face.angle_to_vector()
-        face.denormalize_gaze_vector()
+        pass
 
     def forward(self, images, targets=None):
 
@@ -77,6 +75,10 @@ class GazeModelTest(BaseModel):
 
     def make_targets(self, predictions):
         return torch.from_numpy(predictions[0]).to(self.device)
+
+    def get_gaze_vector(self, predictions, face):
+        face = self._face3d.postprocess(predictions, face)
+        return face.center, face.gaze_vector
 
     def _load_model(self) -> torch.nn.Module:
         model = create_model(self._config)
