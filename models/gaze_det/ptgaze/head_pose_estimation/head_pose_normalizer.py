@@ -1,7 +1,8 @@
 import cv2
+import torch
 import numpy as np
 from scipy.spatial.transform import Rotation
-
+import kornia
 from ..common import Camera, FaceParts, FacePartsName
 
 
@@ -44,6 +45,30 @@ class HeadPoseNormalizer:
         if eye_or_face.name in {FacePartsName.REYE, FacePartsName.LEYE}:
             normalized_image = cv2.cvtColor(normalized_image, cv2.COLOR_BGR2GRAY)
             normalized_image = cv2.equalizeHist(normalized_image)
+        eye_or_face.normalized_image = normalized_image
+
+    def _normalize_image_tensor(self, image: torch.Tensor, eye_or_face: FaceParts) -> None:
+        image = image.unsqueeze(0).float()
+        camera_matrix_inv = np.linalg.inv(self.camera.camera_matrix)
+        normalized_camera_matrix = self.normalized_camera.camera_matrix
+
+        scale = self._get_scale_matrix(eye_or_face.distance)
+        conversion_matrix = scale @ eye_or_face.normalizing_rot.as_matrix()
+
+        projection_matrix = torch.from_numpy((
+            normalized_camera_matrix @ conversion_matrix @ camera_matrix_inv
+        )).float().unsqueeze(0)
+
+        normalized_image = kornia.geometry.transform.warp_perspective(
+            image,
+            projection_matrix,
+            dsize=(self.normalized_camera.width, self.normalized_camera.height),
+        )
+
+        if eye_or_face.name in {FacePartsName.REYE, FacePartsName.LEYE}:
+            raise Exception("Untest")
+        #     normalized_image = cv2.cvtColor(normalized_image, cv2.COLOR_BGR2GRAY)
+        #     normalized_image = cv2.equalizeHist(normalized_image)
         eye_or_face.normalized_image = normalized_image
 
     @staticmethod

@@ -2,3 +2,4 @@ dlib
 mediapipe
 omegaconf
 timm
+kornia
