@@ -19,6 +19,7 @@ class GazeModelTest(BaseModel):
         self._gaze_estimation_model = self._load_model()
         self._face3d = Face3DModel(config)
         self._transform = create_transform(config)
+        self._transform_tensor = create_transform(config, is_tensor=True)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         if loss_fn == "l2":
@@ -38,7 +39,10 @@ class GazeModelTest(BaseModel):
         batch_inputs = []
         for image, face in zip(images, face_ls):
             face = self._face3d.forward(image, face)
-            input_image = self._transform(face.normalized_image)
+            if isinstance(face.normalized_image, np.ndarray):
+                input_image = self._transform(face.normalized_image)
+            else:
+                input_image = self._transform_tensor(face.normalized_image).squeeze(0)
             batch_inputs.append(input_image)
 
         batch_inputs = torch.stack(batch_inputs, dim=0)
