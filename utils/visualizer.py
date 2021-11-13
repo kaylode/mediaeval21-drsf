@@ -1,6 +1,26 @@
+import os
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+
+def crop_video(video_path, out_path):
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+        
+    cap = cv2.VideoCapture(video_path)
+    idx = 0
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if ret:
+            cv2.imwrite(f"{out_path}/{idx}.jpg", frame)
+        else:
+            break
+        idx += 1
+
+    if ret == True:
+        cap.release()
+ 
+    cv2.destroyAllWindows()
 
 def plot_box(image, pred, figsize=(10,10)):
     pred = np.squeeze(pred).tolist()
