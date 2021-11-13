@@ -8,7 +8,7 @@ from models.face_align.models.face_alignment.utils import crop_tensor
 
 class FullAttacker(Attacker):
     """
-    Face model Attacker class
+    Adversarial attack on Face Detection / Landmark Estimation / Gaze Estimation models
     :params:
         optim: name of attack algorithm
         n_iter: number of iterations
@@ -25,9 +25,10 @@ class FullAttacker(Attacker):
             images: list of cv2 image
             victims: dictionary of victim models.  
         :return: 
-            face_boxes: bounding boxes of face in the image. In (x1,y1,x2,y2) format
-            targets: targets for image
+            targets_dict: dict of targets which required for _iterative_attack method
         """
+
+        targets_dict = {}
 
         # Generate detection targets
         # Normalize image
@@ -48,26 +49,41 @@ class FullAttacker(Attacker):
             if len(box) == 0:
                 face_boxes[idx] = face_boxes[idx - 1][:]
 
+        targets_dict["detection"] = det_targets
+
         # Generate alignment targets
         # Get scales and centers of face boxes
-        centers, scales = victims["alignment"]._get_scales_and_centers(face_boxes)
+        if "alignment" in victims.keys():
+            centers, scales = victims["alignment"]._get_scales_and_centers(face_boxes)
 
-        # Normalize image
-        query = victims["alignment"].preprocess(images, centers, scales)
-        query = self._generate_tensors(query)
+            # Normalize image
+            query = victims["alignment"].preprocess(images, centers, scales)
+            query = self._generate_tensors(query)
 
-        # Detect on raw image
-        predictions = victims["alignment"].detect(query, centers, scales)
+            # Detect on raw image
+            predictions = victims["alignment"].detect(query, centers, scales)
 
-        # Make targets
-        lm_targets = victims["alignment"].make_targets(predictions)
+            # Make targets
+            lm_targets = victims["alignment"].make_targets(predictions)
+            landmarks = victims["alignment"].get_landmarks(predictions)
 
-        return {
-            "detection": det_targets,
-            "alignment": lm_targets,
-            "alignment_centers": centers,
-            "alignment_scales": scales,
-        }
+            landmarks = [lm.numpy() for lm in landmarks]
+
+            targets_dict["alignment"] = lm_targets
+            targets_dict["alignment_centers"] = centers
+            targets_dict["alignment_scales"] = scales
+
+            # Generate gaze targets
+            if "gaze" in victims.keys():
+                query = victims["gaze"].preprocess(images, face_boxes, landmarks)
+                predictions = victims["gaze"].detect(query)
+                gaze_targets = victims["gaze"].make_targets(predictions)
+
+                targets_dict["gaze"] = gaze_targets
+                targets_dict["gaze_boxes"] = face_boxes
+                targets_dict["gaze_landmarks"] = landmarks
+
+        return targets_dict
 
     def _iterative_attack(self, att_imgs, targets, victims, optim, n_iter, mask=None):
         """
@@ -94,23 +110,31 @@ class FullAttacker(Attacker):
                 # Forward face detection model
                 det_loss = victims["detection"](att_imgs, targets["detection"])
 
-                # Generate cropped tensors to prepare for alignment model
-                lm_inputs = []
-                for deid, center, scale in zip(
-                    att_imgs, targets["alignment_centers"], targets["alignment_scales"]
-                ):
-                    lm_input = crop_tensor(deid, center, scale)
-                    lm_inputs.append(lm_input)
-                lm_inputs = torch.stack(lm_inputs, dim=0)
+                if "alignment" in victims.keys():
+                    # Generate cropped tensors to prepare for alignment model
+                    lm_inputs = []
+                    for deid, center, scale in zip(
+                        att_imgs, targets["alignment_centers"], targets["alignment_scales"]
+                    ):
+                        lm_input = crop_tensor(deid, center, scale)
+                        lm_inputs.append(lm_input)
+                    lm_inputs = torch.stack(lm_inputs, dim=0)
 
-                # Forward alignment model
-                lm_loss = victims["alignment"](lm_inputs, targets["alignment"])
+                    # Forward alignment model
+                    lm_loss = victims["alignment"](lm_inputs, targets["alignment"])
 
+                    if "gaze" in victims.keys():
+                        # Generate tensors for gaze model
+                        gaze_inputs = victims["gaze"].preprocess(att_imgs, targets["gaze_boxes"], targets["gaze_landmarks"])
+                        gaze_loss = victims["gaze"](gaze_inputs, targets["gaze"])
+                
                 # Sum up loss
                 if det_loss.item() / batch_size > 1.0:
+                    loss = det_loss
+                elif "alignment" in victims.keys() and lm_loss.item() / batch_size > 1e-4:
                     loss = lm_loss + det_loss
-                else:
-                    loss = lm_loss * 2.0
+                elif "gaze" in victims.keys():
+                    loss = lm_loss + det_loss + gaze_loss
 
                 loss.backward()
 
@@ -135,9 +159,9 @@ class FullAttacker(Attacker):
             adv_res: adversarial cv2 images
         """
 
-        assert (
-            "detection" in victims.keys() and "alignment" in victims.keys()
-        ), "Need both detection and alignment models to attack"
+        # assert (
+        #     "detection" in victims.keys() and "alignment" in victims.keys()
+        # ), "Need both detection and alignment models to attack"
 
         targets = self._generate_targets(victims, images)
 
