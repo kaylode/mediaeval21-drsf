@@ -16,11 +16,11 @@ class GazeModelTest(BaseModel):
         assert (
             config.mode == "MPIIGaze" or config.mode == "ETH-XGaze"
         ), "Only ETH-XGaze and MPIIGaze are supported"
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self._gaze_estimation_model = self._load_model()
         self._face3d = Face3DModel(config)
         self._transform = create_transform(config)
         self._transform_tensor = create_transform(config, is_tensor=True)
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         if loss_fn == "l2":
             self.loss_fn = nn.MSELoss()
@@ -55,13 +55,14 @@ class GazeModelTest(BaseModel):
         pass
 
     def forward(self, images, targets):
-
+        images = images.to(self.device)
         preds = self._gaze_estimation_model.forward(images)
         # Regression loss
         loss = self.loss_fn(preds, targets)
         return loss
 
     def detect(self, x):
+        x = x.to(self.device)
         with torch.no_grad():
             preds = self._gaze_estimation_model.forward(x)
         return preds.cpu().detach().numpy()
@@ -84,7 +85,7 @@ class GazeModelTest(BaseModel):
             self._config.gaze_estimator.checkpoint, map_location="cpu"
         )
         model.load_state_dict(checkpoint["model"])
-        model.to(torch.device(self._config.device))
+        model = model.to(self.device)
         model.eval()
         return model
 
