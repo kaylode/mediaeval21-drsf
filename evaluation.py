@@ -6,7 +6,11 @@ import sys
 from models import face_det, face_align, gaze_det
 from attack.attacker import generate_tensors
 from sklearn.metrics.pairwise import paired_euclidean_distances, paired_cosine_distances
-
+from demo.default_config import config
+from models.gaze_det.ptgaze.utils import (
+    check_path_all,
+    generate_dummy_camera_params,
+)
 DETECTION = "retinaface"
 ALIGNMENT = "fan"
 GAZE = "GazeModel"
@@ -150,9 +154,13 @@ if __name__ == "__main__":
     pbar = tqdm(total=total)
     # write tqdm progress bar for while
 
+    if config.gaze_estimator.use_dummy_camera_params:
+        generate_dummy_camera_params(config)
+    check_path_all(config)
+
     det_model = face_det.get_model(DETECTION)
     align_model = face_align.get_model(ALIGNMENT)
-    gaze_model = gaze_det.get_model(GAZE)
+    gaze_model = gaze_det.get_model(GAZE, config=config)
     evaluator = Evaluator(det_model, align_model, gaze_model)
 
     while True:
