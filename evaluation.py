@@ -3,17 +3,27 @@ from tqdm.auto import tqdm
 import cv2
 import os
 import sys
+import argparse
 from models import face_det, face_align, gaze_det
 from attack.attacker import generate_tensors
 from sklearn.metrics.pairwise import paired_euclidean_distances, paired_cosine_distances
-from demo.default_config import config
-from models.gaze_det.ptgaze.utils import (
-    check_path_all,
-    generate_dummy_camera_params,
+
+parser = argparse.ArgumentParser("Video De-identification Evaluation")
+parser.add_argument(
+    "video1", type=str, help="Video path"
 )
-DETECTION = "retinaface"
-ALIGNMENT = "fan"
-GAZE = "GazeModel"
+parser.add_argument(
+    "video2", type=str, help="Video path"
+)
+parser.add_argument(
+    "--detector", "-d", type=str, default="retinaface", help="Victim detector"
+)
+parser.add_argument(
+    "--alignment", "-a", type=str, default="fan", help="Victim alignment"
+)
+parser.add_argument(
+    "--gaze", "-g", type=str, default="ETH-XGaze", help="Victim gaze"
+)
 
 def calc_iou(boxA, boxB):
     # determine the (x, y)-coordinates of the intersection rectangle
@@ -122,9 +132,10 @@ class AvgMeter:
 
 
 if __name__ == "__main__":
+    args = parser.parse_args()
     # get video file path
-    video_path = sys.argv[1]
-    video_path2 = sys.argv[2]
+    video_path = args.video1
+    video_path2 = args.video2
     # get video file name
     video_name = os.path.splitext(os.path.basename(video_path))[0]
     video_name2 = os.path.splitext(os.path.basename(video_path2))[0]
@@ -154,13 +165,9 @@ if __name__ == "__main__":
     pbar = tqdm(total=total)
     # write tqdm progress bar for while
 
-    if config.gaze_estimator.use_dummy_camera_params:
-        generate_dummy_camera_params(config)
-    check_path_all(config)
-
-    det_model = face_det.get_model(DETECTION)
-    align_model = face_align.get_model(ALIGNMENT)
-    gaze_model = gaze_det.get_model(GAZE, config=config)
+    det_model = face_det.get_model(args.detector)
+    align_model = face_align.get_model(args.alignment)
+    gaze_model = gaze_det.GazeModel(args.gaze)
     evaluator = Evaluator(det_model, align_model, gaze_model)
 
     while True:

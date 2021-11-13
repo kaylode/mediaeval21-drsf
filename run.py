@@ -9,6 +9,8 @@ from models.face_align.fan import FANAlignment
 from models.face_align.models.face_alignment.utils import crop
 from models.face_det.retinaface import RetinaFaceDetector
 from attack.attacker import generate_tensors
+
+
 import argparse
 
 parser = argparse.ArgumentParser("Video De-identification")

@@ -1,5 +1,4 @@
 
-from omegaconf.dictconfig import DictConfig
 import torch
 import torch.nn as nn
 import numpy as np
@@ -9,18 +8,20 @@ from models.gaze_det.ptgaze.models import create_model
 from models.gaze_det.ptgaze.transforms import create_transform
 from .face3d import Face3DModel
 
+from models.gaze_det.ptgaze.configs.default_config import get_config
+
 class GazeModel(BaseModel):
-    def __init__(self, config: DictConfig, loss_fn: str = "l2"):
+    def __init__(self, name, loss_fn: str = "l2"):
         super(GazeModel, self).__init__()
-        self._config = config
+        self._config = get_config(name)
         assert (
-            config.mode == "MPIIGaze" or config.mode == "ETH-XGaze"
+            self._config.mode == "MPIIGaze" or self._config.mode == "ETH-XGaze"
         ), "Only ETH-XGaze and MPIIGaze are supported"
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self._gaze_estimation_model = self._load_model()
-        self._face3d = Face3DModel(config)
-        self._transform = create_transform(config)
-        self._transform_tensor = create_transform(config, is_tensor=True)
+        self._face3d = Face3DModel(self._config)
+        self._transform = create_transform(self._config)
+        self._transform_tensor = create_transform(self._config, is_tensor=True)
 
         if loss_fn == "l2":
             self.loss_fn = nn.MSELoss()

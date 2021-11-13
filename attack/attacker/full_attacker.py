@@ -15,7 +15,7 @@ class FullAttacker(Attacker):
         eps: epsilon param
     """
 
-    def __init__(self, optim, n_iter=10, eps=8 / 255.0):
+    def __init__(self, optim, n_iter=None, eps=8 / 255.0):
         super().__init__(optim, n_iter, eps)
 
     def _generate_targets(self, victims, images):
