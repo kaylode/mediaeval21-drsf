@@ -11,19 +11,12 @@ from attack.deid import Pixelate
 from models.face_align.fan import FANAlignment
 from models.face_det.retinaface import RetinaFaceDetector
 from attack.attacker import FullAttacker, generate_tensors
-from models.gaze_det.ptgaze.utils import (
-    check_path_all,
-    generate_dummy_camera_params,
-)
-
-if config.gaze_estimator.use_dummy_camera_params:
-    generate_dummy_camera_params(config)
-check_path_all(config)
+from models.gaze_det.gaze import GazeModel
 
 # Init models, attackers
 align_model = FANAlignment()
 det_model = RetinaFaceDetector()
-gaze_model = GazeModel(config)
+gaze_model = GazeModel('ETH-XGaze')
 attacker = FullAttacker('rmsprop')
 deid_fn = Pixelate(40)
 
@@ -79,7 +72,10 @@ def doit(batch):
 ## Evaluation
 
 ```bash
-python evaluation.py <video1> <video2>
+python evaluation.py    <video1> <video2> \
+                        -d [retinaface, mtcnn] \
+                        -a [fan] \
+                        -g [MPIIFaceGaze, ETH-XGaze]
 ```
 
 ## Colab Notebooks

@@ -16,9 +16,6 @@ class Face3DModel(BaseModel):
     def __init__(self, config: DictConfig):
         super(Face3DModel, self).__init__()
         self._config = config
-        assert (
-            config.mode == "MPIIFaceGaze" or config.mode == "ETH-XGaze"
-        ), "Only ETH-XGaze and MPIIFaceGaze are supported"
         self._face_model3d = FaceModel68()
         self.camera = Camera(config.gaze_estimator.camera_params)
         self._normalized_camera = Camera(config.gaze_estimator.normalized_camera_params)
