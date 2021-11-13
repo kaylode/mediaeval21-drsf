@@ -103,7 +103,7 @@ class FullAttacker(Attacker):
         batch_size = att_imgs.shape[0]
 
         # Start attack
-        for _ in range(n_iter):
+        while True:
             optim.zero_grad()
             with torch.set_grad_enabled(True):
 
@@ -131,9 +131,9 @@ class FullAttacker(Attacker):
                         del gaze_inputs
                 
                 # Sum up loss
-                if det_loss.item() / batch_size > 1.0:
+                if det_loss.item() / batch_size > 0.3:
                     loss = det_loss
-                elif "alignment" in victims.keys() and lm_loss.item() / batch_size > 1e-5:
+                elif "alignment" in victims.keys() and lm_loss.item() / batch_size > 3e-5:
                     loss = lm_loss + det_loss
                 elif "gaze" in victims.keys() and gaze_loss.item()/ batch_size > 5e-4:
                     loss = gaze_loss + lm_loss + det_loss
