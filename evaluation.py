@@ -1,71 +1,91 @@
 # write opencv read 2 videos and compare them
 from tqdm.auto import tqdm
-
 import cv2
-import numpy as np
 import os
 import sys
-import time
-from demo.default_config import config
-import numpy as np
-
-from estimators.gaze import GazeEstimator
-from models.gaze_det.ptgaze.common import Face
-from models.gaze_det.ptgaze.utils import generate_dummy_camera_params
+from models import face_det, face_align, gaze_det
+from attack.attacker import generate_tensors
 from sklearn.metrics.pairwise import paired_euclidean_distances, paired_cosine_distances
 
-if config.gaze_estimator.use_dummy_camera_params:
-    generate_dummy_camera_params(config)
+DETECTION = "retinaface"
+ALIGNMENT = "fan"
+GAZE = "GazeModel"
 
-e = GazeEstimator.from_name(
-    det_name="retinaface",
-    align_name="fan",
-    face3d_name="Face3DModel",
-    gaze_name="GazeModel",
-    cfg=config,
-)
-
-
-def compare_faces(face_1: Face, face_2: Face):
-    bbox1 = face_1.bbox.reshape((1, 4))
-    bbox2 = face_2.bbox.reshape((1, 4))
-    landmarks1 = face_1.landmarks
-    landmarks2 = face_2.landmarks
-    gaze1 = face_1.gaze_vector.reshape((1, 3))
-    gaze2 = face_2.gaze_vector.reshape((1, 3))
-
-    euler_angles1 = face_1.head_pose_rot.as_euler("XYZ", degrees=True).reshape((1, 3))
-    euler_angles2 = face_2.head_pose_rot.as_euler("XYZ", degrees=True).reshape((1, 3))
-
-    return {
-        "bbox L2 error": paired_euclidean_distances(bbox1, bbox2).mean(),
-        "landmakrs L2 error": paired_euclidean_distances(landmarks1, landmarks2).mean(),
-        "gaze L2 error": paired_euclidean_distances(gaze1, gaze2).mean(),
-        "head posee angle error": paired_cosine_distances(
-            euler_angles1, euler_angles2
-        ).mean(),
-    }
+def calc_iou(boxA, boxB):
+    # determine the (x, y)-coordinates of the intersection rectangle
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
+    # compute the area of intersection rectangle
+    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+    # compute the area of both the prediction and ground-truth
+    # rectangles
+    boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
+    boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
+    # compute the intersection over union by taking the intersection
+    # area and dividing it by the sum of prediction + ground-truth
+    # areas - the interesection area
+    iou = interArea / float(boxAArea + boxBArea - interArea)
+    # return the intersection over union value
+    return iou
 
 
-def compare(e, frame1, frame2):
-    face1 = calc(e, frame1)
-    face2 = calc(e, frame2)
-    return compare_faces(face1, face2)
+class Evaluator:
+    def __init__(self, det_model, align_model=None, gaze_model=None):
+        self.det_model = det_model
+        self.align_model = align_model
+        self.gaze_model = gaze_model
 
+    def _evaluate_detection(self, frame1, frame2):
+        results_norm = self.det_model.preprocess([frame1, frame2])
+        results_norm = generate_tensors(results_norm)
+        det_results = self.det_model.detect(results_norm)
+        face_boxes = self.det_model.get_face_boxes(det_results)
 
-def calc(estimator, image):
-    undistorted = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    undistorted = cv2.undistort(
-        undistorted, estimator.camera.camera_matrix, estimator.camera.dist_coefficients,
-    )
-    undistorted = [undistorted]
+        iou_score = calc_iou(face_boxes[0], face_boxes[1])
+        return iou_score, face_boxes
 
-    face = estimator.detect_faces(undistorted)[0]
+    def _evaluate_alignment(self, frame1, frame2, bboxes):
+        centers, scales = self.align_model._get_scales_and_centers(bboxes)
+        lm_norm = self.align_model.preprocess([frame1, frame2], centers, scales)
+        lm_norm = generate_tensors(lm_norm)
+        _, landmarks = self.align_model.detect(lm_norm, centers, scales)
 
+        landmarks = [lm.numpy() for lm in landmarks]
 
-    estimator.estimate_gaze(undistorted, face)
-    return face
+        dist = paired_euclidean_distances(landmarks[0], landmarks[1]).mean()
+        return dist, landmarks
 
+    def _evaluate_gaze(self, frame1, frame2, bboxes, landmarks):
+        gaze_norm, faces = self.gaze_model.preprocess([frame1, frame2], bboxes, landmarks, return_faces=True)
+        gaze_results = self.gaze_model.detect(gaze_norm)
+        
+        for face, gaze_vector in zip(faces, gaze_results):
+            self.gaze_model._face3d.postprocess([gaze_vector], face)
+
+        euler_angles1 = faces[0].head_pose_rot.as_euler("XYZ", degrees=True).reshape((1, 3))
+        euler_angles2 = faces[1].head_pose_rot.as_euler("XYZ", degrees=True).reshape((1, 3))
+
+        cosine_dist = paired_cosine_distances(euler_angles1, euler_angles2).mean()
+
+        return cosine_dist
+
+    def evaluate(self, frame1, frame2):
+
+        eval_results = {}
+        iou_score, bboxes = self._evaluate_detection(frame1, frame2)
+        eval_results['box_iou'] = iou_score
+
+        if self.align_model is not None:
+            lm_dist, landmarks = self._evaluate_alignment(frame1, frame2, bboxes)
+            eval_results['lm_edist'] = lm_dist
+
+        if self.gaze_model is not None:
+            gaze_dist = self._evaluate_gaze(frame1, frame2, bboxes, landmarks)
+            eval_results['gaze_cosine_dist'] = gaze_dist
+
+        return eval_results
 
 class AvgMeter:
     def __init__(self):
@@ -130,6 +150,11 @@ if __name__ == "__main__":
     pbar = tqdm(total=total)
     # write tqdm progress bar for while
 
+    det_model = face_det.get_model(DETECTION)
+    align_model = face_align.get_model(ALIGNMENT)
+    gaze_model = gaze_det.get_model(GAZE)
+    evaluator = Evaluator(det_model, align_model, gaze_model)
+
     while True:
         # get current frame
         ret, frame = cap.read()
@@ -138,12 +163,13 @@ if __name__ == "__main__":
         if not ret or not ret2:
             break
         try:
-            res = compare(e, frame, frame2)
+            results = evaluator.evaluate(frame, frame2)
         except:
             pbar.update(1)
             continue
-        meter.update(res)
+        meter.update(results)
         pbar.update(1)
+
     # release video object
     if ret == True:
         cap.release()
@@ -152,5 +178,4 @@ if __name__ == "__main__":
         cap2.release()
 
     cv2.destroyAllWindows()
-
     meter.summary()

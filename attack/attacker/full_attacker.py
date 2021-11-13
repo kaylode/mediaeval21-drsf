@@ -122,19 +122,23 @@ class FullAttacker(Attacker):
 
                     # Forward alignment model
                     lm_loss = victims["alignment"](lm_inputs, targets["alignment"])
+                    del lm_inputs
 
                     if "gaze" in victims.keys():
                         # Generate tensors for gaze model
                         gaze_inputs = victims["gaze"].preprocess(att_imgs, targets["gaze_boxes"], targets["gaze_landmarks"])
                         gaze_loss = victims["gaze"](gaze_inputs, targets["gaze"])
+                        del gaze_inputs
                 
                 # Sum up loss
                 if det_loss.item() / batch_size > 1.0:
                     loss = det_loss
-                elif "alignment" in victims.keys() and lm_loss.item() / batch_size > 1e-4:
+                elif "alignment" in victims.keys() and lm_loss.item() / batch_size > 1e-5:
                     loss = lm_loss + det_loss
-                elif "gaze" in victims.keys():
-                    loss = lm_loss + det_loss + gaze_loss
+                elif "gaze" in victims.keys() and gaze_loss.item()/ batch_size > 5e-4:
+                    loss = gaze_loss + lm_loss + det_loss
+                else:
+                    break
 
                 loss.backward()
 
@@ -144,8 +148,8 @@ class FullAttacker(Attacker):
             optim.step()
 
         # Get the adversarial images
-        adv_res = att_imgs.clone()
-        return adv_res
+        att_imgs = att_imgs.detach().cpu()
+        return att_imgs
 
     def attack(self, victims, images, deid_images, optim_params={}):
         """
