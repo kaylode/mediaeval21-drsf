@@ -1,3 +1,4 @@
+import os
 import bz2
 import logging
 import operator
@@ -50,10 +51,8 @@ def download_dlib_pretrained_model() -> None:
 
 def download_mpiigaze_model() -> pathlib.Path:
     logger.debug("Called _download_mpiigaze_model()")
-    output_dir = pathlib.Path("~/.ptgaze/models/").expanduser()
-    output_dir.mkdir(exist_ok=True, parents=True)
-    output_path = output_dir / "mpiigaze_resnet_preact.pth"
-    if not output_path.exists():
+    output_path = "demo/pretrained/mpiigaze_resnet_preact.pth"
+    if not os.path.exists(output_path):
         logger.debug("Download the pretrained model")
         torch.hub.download_url_to_file(
             "https://github.com/hysts/pytorch_mpiigaze_demo/releases/download/v0.1.0/mpiigaze_resnet_preact.pth",
@@ -66,10 +65,8 @@ def download_mpiigaze_model() -> pathlib.Path:
 
 def download_mpiifacegaze_model() -> pathlib.Path:
     logger.debug("Called _download_mpiifacegaze_model()")
-    output_dir = pathlib.Path("~/.ptgaze/models/").expanduser()
-    output_dir.mkdir(exist_ok=True, parents=True)
-    output_path = output_dir / "mpiifacegaze_resnet_simple.pth"
-    if not output_path.exists():
+    output_path = "demo/pretrained/mpiifacegaze_resnet_simple.pth"
+    if not os.path.exists(output_path):
         logger.debug("Download the pretrained model")
         torch.hub.download_url_to_file(
             "https://github.com/hysts/pytorch_mpiigaze_demo/releases/download/v0.1.0/mpiifacegaze_resnet_simple.pth",
@@ -82,10 +79,8 @@ def download_mpiifacegaze_model() -> pathlib.Path:
 
 def download_ethxgaze_model() -> pathlib.Path:
     logger.debug("Called _download_ethxgaze_model()")
-    output_dir = pathlib.Path("~/.ptgaze/models/").expanduser()
-    output_dir.mkdir(exist_ok=True, parents=True)
-    output_path = output_dir / "eth-xgaze_resnet18.pth"
-    if not output_path.exists():
+    output_path = "demo/pretrained/eth-xgaze_resnet18.pth"
+    if not os.path.exists(output_path):
         logger.debug("Download the pretrained model")
         torch.hub.download_url_to_file(
             "https://github.com/hysts/pytorch_mpiigaze_demo/releases/download/v0.2.2/eth-xgaze_resnet18.pth",

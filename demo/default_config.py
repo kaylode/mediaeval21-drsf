@@ -5,9 +5,9 @@ test_params = {
     "device": "cpu",
     "model": {"name": "resnet18"},
     "gaze_estimator": {
-        "checkpoint": "/home/nhtlong/.ptgaze/models/eth-xgaze_resnet18.pth",
+        "checkpoint": "./demo/pretrained/eth-xgaze_resnet18.pth",
         "use_dummy_camera_params": True,
-        "normalized_camera_params": "/home/nhtlong/workspace/mediaeval21/dr-ws/demo/data/normalized_camera_params/eth-xgaze.yaml",
+        "normalized_camera_params": "./demo/data/normalized_camera_params/eth-xgaze.yaml",
         "normalized_camera_distance": 0.6,
         "image_size": [224, 224],
     },
