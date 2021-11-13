@@ -61,6 +61,8 @@ def calc(estimator, image):
     undistorted = [undistorted]
 
     face = estimator.detect_faces(undistorted)[0]
+
+
     estimator.estimate_gaze(undistorted, face)
     return face
 
@@ -89,7 +91,9 @@ class AvgMeter:
         self.sample_size = 0
 
     def summary(self):
-        for key, value in self.result.items():
+        results = self.value()
+        print(f"Evaluate {self.sample_size} frames")
+        for key, value in results.items():
             print(f"{key} : {value:.6f}")
 
 
@@ -133,10 +137,20 @@ if __name__ == "__main__":
         # check if frame is read
         if not ret or not ret2:
             break
-        res = compare(e, frame, frame2)
+        try:
+            res = compare(e, frame, frame2)
+        except:
+            pbar.update(1)
+            continue
         meter.update(res)
         pbar.update(1)
     # release video object
-    cap.release()
-    cap2.release()
+    if ret == True:
+        cap.release()
+
+    if ret2 == True:
+        cap2.release()
+
+    cv2.destroyAllWindows()
+
     meter.summary()
