@@ -1,3 +1,9 @@
+def warn(*args, **kwargs):
+    pass
+
+import warnings
+warnings.warn = warn
+
 import os
 import cv2
 import numpy as np
@@ -12,6 +18,7 @@ from attack.attacker import generate_tensors
 from utils.visualizer import *
 
 import argparse
+
 
 parser = argparse.ArgumentParser("Video De-identification")
 parser.add_argument(
