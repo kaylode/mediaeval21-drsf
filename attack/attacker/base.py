@@ -27,11 +27,11 @@ class Attacker:
     Abstract class for Attacker
     :params:
         optim: name of attack algorithm
-        n_iter: number of iterations
+        max_iter: maximum number of iterations
         eps: epsilon param
     """
-    def __init__(self, optim, n_iter=10, eps=8/255.):
-        self.n_iter = n_iter
+    def __init__(self, optim, max_iter=10, eps=8/255.):
+        self.max_iter = max_iter
         self.eps = eps
         self.optim = optim
     
@@ -64,7 +64,7 @@ class Attacker:
         """
         raise NotImplementedError("This is an interface method")
 
-    def _iterative_attack(self, att_img, targets, model, optim, n_iter, mask=None):
+    def _iterative_attack(self, att_img, targets, model, optim, max_iter, mask=None):
         """
         Performs iterative adversarial attack on image
         :params:
@@ -72,13 +72,13 @@ class Attacker:
             targets: attack targets
             model: victim detection model
             optim: optimizer
-            n_iter: number of attack iterations
+            max_iter: number of attack iterations
             mask: gradient mask
         :return: 
             results: tensor image with updated gradients
         """
 
-        for _ in range(n_iter):
+        for _ in range(max_iter):
             optim.zero_grad()
             with torch.set_grad_enabled(True):
                 loss = model(att_img, targets)
@@ -119,7 +119,7 @@ class Attacker:
 
         # Adversarial attack
         adv_tensors.requires_grad = True
-        adv_res = self._iterative_attack(adv_tensors, targets, victim, optim, self.n_iter)
+        adv_res = self._iterative_attack(adv_tensors, targets, victim, optim, self.max_iter)
 
         # Postprocess, return cv2 image
         adv_res = victim.postprocess(adv_res)

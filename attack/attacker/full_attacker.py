@@ -11,12 +11,12 @@ class FullAttacker(Attacker):
     Adversarial attack on Face Detection / Landmark Estimation / Gaze Estimation models
     :params:
         optim: name of attack algorithm
-        n_iter: number of iterations
+        max_iter: maximum number of iterations
         eps: epsilon param
     """
 
-    def __init__(self, optim, n_iter=None, eps=8 / 255.0):
-        super().__init__(optim, n_iter, eps)
+    def __init__(self, optim, max_iter=150, eps=8 / 255.0):
+        super().__init__(optim, max_iter, eps)
 
     def _generate_targets(self, victims, images):
         """
@@ -85,7 +85,7 @@ class FullAttacker(Attacker):
 
         return targets_dict
 
-    def _iterative_attack(self, att_imgs, targets, victims, optim, n_iter, mask=None):
+    def _iterative_attack(self, att_imgs, targets, victims, optim, max_iter, mask=None):
         """
         Performs iterative adversarial attack on batch images
         :params:
@@ -93,7 +93,7 @@ class FullAttacker(Attacker):
             targets: dictionary of attack targets
             victims: dictionary of victim models.  
             optim: optimizer
-            n_iter: number of attack iterations
+            max_iter: maximum number of attack iterations
             mask: gradient mask
         :return: 
             results: tensor image with updated gradients
@@ -102,6 +102,7 @@ class FullAttacker(Attacker):
         # Batch size for normalizing loss
         batch_size = att_imgs.shape[0]
 
+        iter = 0
         # Start attack
         while True:
             optim.zero_grad()
@@ -147,6 +148,10 @@ class FullAttacker(Attacker):
 
             optim.step()
 
+            if iter == max_iter:
+                break
+        
+        print("Number of iter: ", iter)
         # Get the adversarial images
         att_imgs = att_imgs.detach().cpu()
         return att_imgs
@@ -187,7 +192,7 @@ class FullAttacker(Attacker):
             targets=targets,
             victims=victims,
             optim=optim,
-            n_iter=self.n_iter,
+            max_iter=self.max_iter,
         )
 
         # Postprocess, return cv2 image
