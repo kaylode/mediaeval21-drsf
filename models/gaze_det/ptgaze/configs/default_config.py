@@ -41,7 +41,12 @@ def get_config(name):
         test_params = {
             "mode": "MPIIFaceGaze",
             "device": "cpu",
-            "model": {"name": "resnet_simple"},
+            "model": {"name": "resnet_simple", "backbone": {
+                "name": "resnet_simple",
+                "pretrained": "resnet18",
+                "resnet_block": "basic",
+                "resnet_layers": [2, 2, 2]
+            }},
             "gaze_estimator": {
                 "checkpoint": "./assets/pretrained/mpiifacegaze_resnet_simple.pth",
                 "use_dummy_camera_params": True,

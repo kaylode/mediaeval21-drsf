@@ -150,6 +150,8 @@ class FullAttacker(Attacker):
 
             if iter == max_iter:
                 break
+
+            iter += 1
         
         print("Number of iter: ", iter)
         # Get the adversarial images

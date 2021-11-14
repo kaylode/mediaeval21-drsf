@@ -22,7 +22,7 @@ def _create_mpiifacegaze_transform(config: DictConfig, is_tensor: bool = False) 
     if is_tensor:
         transform = T.Compose(
             [
-                T.Lambda(lambda x: x[:, :, ::-1]),
+                T.Lambda(lambda x: x.flip(-3)),
                 T.Lambda(lambda x: torch.nn.functional.interpolate(x, size=size, mode='bilinear')),
                 T.Normalize(mean=[0.406, 0.456, 0.485], std=[0.225, 0.224, 0.229]),  # BGR
             ]
