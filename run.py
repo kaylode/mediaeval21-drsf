@@ -134,8 +134,8 @@ if __name__ == "__main__":
     FPS = int(CAP.get(cv2.CAP_PROP_FPS))
     NUM_FRAMES = int(CAP.get(cv2.CAP_PROP_FRAME_COUNT))
     VIDEO_NAME = os.path.basename(args.video_path)[:-4]
-    OUTPUT_PATH = os.path.join(args.output_path, f"{VIDEO_NAME}_deid_viz.avi")
-    OUTPUT_PATH2 = os.path.join(args.output_path, f"{VIDEO_NAME}_deid.avi")
+    OUTPUT_PATH = os.path.join(args.output_path, f"{VIDEO_NAME}_viz.avi")
+    OUTPUT_PATH2 = os.path.join(args.output_path, f"{VIDEO_NAME}.avi")
 
     outvid = cv2.VideoWriter(OUTPUT_PATH, cv2.VideoWriter_fourcc('M','J','P','G'), FPS, (WIDTH,HEIGHT))
     outvid2 = cv2.VideoWriter(OUTPUT_PATH2, cv2.VideoWriter_fourcc('M','J','P','G'), FPS, (WIDTH,HEIGHT))
