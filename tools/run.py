@@ -15,7 +15,6 @@ from models import face_det, face_align, gaze_det
 from models.face_align.models.face_alignment.utils import crop
 
 from attack.attacker import generate_tensors
-from utils.visualizer import *
 
 import argparse
 
@@ -36,7 +35,7 @@ parser.add_argument(
 )
 parser.add_argument("--algorithm", "-g", type=str, default="rmsprop", help="Algorithm")
 parser.add_argument(
-    "--deid", "-m", type=str, default="pixelate", help="De-identification method"
+    "--deid", "-m", type=str, default="pixelate_30", help="De-identification method"
 )
 parser.add_argument(
     "--max_iter", type=int, default=150, help="Maximum number of iterations to attack"
@@ -126,10 +125,11 @@ if __name__ == "__main__":
     align_model = face_align.get_model(args.alignment)
     gaze_model = gaze_det.GazeModel(args.gaze)
 
-    if args.deid == "pixelate":
-        deid_fn = Pixelate(30)
-    elif args.deid == "blur":
-        deid_fn = Blur(30)
+    deid_level = args.deid.split('_')
+    if args.deid.startswith("pixelate"):
+        deid_fn = Pixelate(int(deid_level))
+    elif args.deid.startswith("blur"):
+        deid_fn = Blur(int(deid_level))
 
     attacker = FullAttacker(args.algorithm, max_iter=args.max_iter)
 
@@ -141,11 +141,9 @@ if __name__ == "__main__":
     FPS = int(CAP.get(cv2.CAP_PROP_FPS))
     NUM_FRAMES = int(CAP.get(cv2.CAP_PROP_FRAME_COUNT))
     VIDEO_NAME = os.path.basename(args.video_path)[:-4]
-    OUTPUT_PATH = os.path.join(args.output_path, f"{VIDEO_NAME}_viz.avi")
-    OUTPUT_PATH2 = os.path.join(args.output_path, f"{VIDEO_NAME}.avi")
+    OUTPUT_PATH = os.path.join(args.output_path, f"{VIDEO_NAME}.avi")
 
     outvid = cv2.VideoWriter(OUTPUT_PATH, cv2.VideoWriter_fourcc('M','J','P','G'), FPS, (WIDTH,HEIGHT))
-    outvid2 = cv2.VideoWriter(OUTPUT_PATH2, cv2.VideoWriter_fourcc('M','J','P','G'), FPS, (WIDTH,HEIGHT))
 
     batch = []
     frame_id = 0
@@ -171,31 +169,10 @@ if __name__ == "__main__":
 
                 batch = []
 
-                if len(bboxes) != 0 :
-                    for adv_img, face_box, landmark, gaze_center, gaze_vector in zip(adv_images, bboxes, landmarks, gaze_centers, gaze_vectors):
-                        image = adv_img.copy()
-                        plot_box(image, face_box)
-                        draw_points(image, landmark)
-
-                        draw_3d_line(
-                            image,
-                            gaze_center, 
-                            gaze_center +  0.05 * gaze_vector,
-                            camera = gaze_model._face3d.camera
-                        )
-                        
-                        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                        outvid.write(image)
-                else:
-                    for adv_img in adv_images:
-                        image = adv_img.copy()
-                        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                        outvid.write(image)
-
                 for adv_img in adv_images:
                     image = adv_img.copy()
                     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                    outvid2.write(image)
+                    outvid.write(image)
                 
                 pbar.update(BATCH_SIZE)
             frame_id += 1
