@@ -1,5 +1,3 @@
-dlib
-mediapipe
 omegaconf
 timm
 torchvision==0.10
