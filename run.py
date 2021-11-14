@@ -32,7 +32,7 @@ parser.add_argument(
     "--deid", "-m", type=str, default="pixelate", help="De-identification method"
 )
 parser.add_argument(
-    "--num_iters", type=int, default=None, help="Number of iterations to attack"
+    "--max_iter", type=int, default=150, help="Maximum number of iterations to attack"
 )
 parser.add_argument(
     "--batch_size", "-bs", type=int, default=16, help="Batch size"
@@ -120,11 +120,11 @@ if __name__ == "__main__":
     gaze_model = gaze_det.GazeModel(args.gaze)
 
     if args.deid == "pixelate":
-        deid_fn = Pixelate(40)
+        deid_fn = Pixelate(30)
     elif args.deid == "blur":
         deid_fn = Blur(30)
 
-    attacker = FullAttacker(args.algorithm, n_iter=args.num_iters)
+    attacker = FullAttacker(args.algorithm, max_iter=args.max_iter)
 
     # Read in video
     BATCH_SIZE = args.batch_size
@@ -134,8 +134,8 @@ if __name__ == "__main__":
     FPS = int(CAP.get(cv2.CAP_PROP_FPS))
     NUM_FRAMES = int(CAP.get(cv2.CAP_PROP_FRAME_COUNT))
     VIDEO_NAME = os.path.basename(args.video_path)[:-4]
-    OUTPUT_PATH = os.path.join(args.output_path, f"{VIDEO_NAME}_deid.avi")
-    OUTPUT_PATH2 = os.path.join(args.output_path, f"{VIDEO_NAME}_deid_viz.avi")
+    OUTPUT_PATH = os.path.join(args.output_path, f"{VIDEO_NAME}_deid_viz.avi")
+    OUTPUT_PATH2 = os.path.join(args.output_path, f"{VIDEO_NAME}_deid.avi")
 
     outvid = cv2.VideoWriter(OUTPUT_PATH, cv2.VideoWriter_fourcc('M','J','P','G'), FPS, (WIDTH,HEIGHT))
     outvid2 = cv2.VideoWriter(OUTPUT_PATH2, cv2.VideoWriter_fourcc('M','J','P','G'), FPS, (WIDTH,HEIGHT))
