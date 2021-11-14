@@ -25,7 +25,7 @@ parser.add_argument(
     "--alignment", "-a", type=str, default="fan", help="Victim alignment"
 )
 parser.add_argument(
-    "--gaze", "-g", type=str, default="ETH-XGaze", help="Victim gaze"
+    "--gaze", "-z", type=str, default="ETH-XGaze", help="Victim gaze"
 )
 parser.add_argument("--algorithm", "-g", type=str, default="rmsprop", help="Algorithm")
 parser.add_argument(
@@ -141,49 +141,56 @@ if __name__ == "__main__":
     outvid2 = cv2.VideoWriter(OUTPUT_PATH2, cv2.VideoWriter_fourcc('M','J','P','G'), FPS, (WIDTH,HEIGHT))
 
     batch = []
-    for frame_id in tqdm(range(NUM_FRAMES)):
-        if os.path.exists(f"/content/frames/{VIDEO_NAME}/{frame_id}.jpg"):
-            input_img = cv2.imread(f"/content/frames/{VIDEO_NAME}/{frame_id}.jpg")
-            cv2_image = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
+    frame_id = 0
+    with tqdm(total=NUM_FRAMES) as pbar:
+        while CAP.isOpened():
+            ret, frame = CAP.read()
+            if not ret:
+                break
+
+            cv2_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             batch.append(cv2_image)
 
-        if (len(batch)+1) % BATCH_SIZE == 0 or frame_id==NUM_FRAMES-1:
+            if (len(batch)) % BATCH_SIZE == 0 or frame_id==NUM_FRAMES-1:
 
-            deid_images = deid(batch, det_model, align_model, deid_fn)
-            adv_images = attack(batch, deid_images, attacker, 
-                                victims = {
-                                    'detection': det_model,
-                                    'alignment': align_model,
-                                    'gaze': gaze_model
-                                })
-            bboxes, landmarks, gaze_centers, gaze_vectors = inference(adv_images, det_model, align_model, gaze_model)
+                deid_images = deid(batch, det_model, align_model, deid_fn)
+                adv_images = attack(batch, deid_images, attacker, 
+                                    victims = {
+                                        'detection': det_model,
+                                        'alignment': align_model,
+                                        'gaze': gaze_model
+                                    })
+                bboxes, landmarks, gaze_centers, gaze_vectors = inference(adv_images, det_model, align_model, gaze_model)
 
-            batch = []
+                batch = []
 
-            if len(bboxes) != 0 :
-                for adv_img, face_box, landmark, gaze_center, gaze_vector in zip(adv_images, bboxes, landmarks, gaze_centers, gaze_vectors):
-                    image = adv_img.copy()
-                    plot_box(image, face_box)
-                    draw_points(image, landmark)
+                if len(bboxes) != 0 :
+                    for adv_img, face_box, landmark, gaze_center, gaze_vector in zip(adv_images, bboxes, landmarks, gaze_centers, gaze_vectors):
+                        image = adv_img.copy()
+                        plot_box(image, face_box)
+                        draw_points(image, landmark)
 
-                    draw_3d_line(
-                        image,
-                        gaze_center, 
-                        gaze_center +  0.05 * gaze_vector,
-                        camera = gaze_model._face3d.camera
-                    )
-                    
-                    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                    outvid.write(image)
-            else:
+                        draw_3d_line(
+                            image,
+                            gaze_center, 
+                            gaze_center +  0.05 * gaze_vector,
+                            camera = gaze_model._face3d.camera
+                        )
+                        
+                        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                        outvid.write(image)
+                else:
+                    for adv_img in adv_images:
+                        image = adv_img.copy()
+                        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                        outvid.write(image)
+
                 for adv_img in adv_images:
                     image = adv_img.copy()
                     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                    outvid.write(image)
-
-            for adv_img in adv_images:
-                image = adv_img.copy()
-                image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                outvid2.write(image)
+                    outvid2.write(image)
+                
+                pbar.update(BATCH_SIZE)
+            frame_id += 1
 
     print(f"Attacked video is saved at {OUTPUT_PATH}")
