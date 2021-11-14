@@ -69,7 +69,7 @@ class RetinaFace(nn.Module):
         if cfg['name'] == 'mobilenet0.25':
             backbone = MobileNetV1()
             if cfg['pretrain']:
-                checkpoint = torch.load("demo/pretrained/mobilenetV1X0.25_pretrain.tar", map_location=torch.device('cpu'))
+                checkpoint = torch.load("assets/pretrained/mobilenetV1X0.25_pretrain.tar", map_location=torch.device('cpu'))
                 from collections import OrderedDict
                 new_state_dict = OrderedDict()
                 for k, v in checkpoint['state_dict'].items():
@@ -214,7 +214,7 @@ class RetinaFace(nn.Module):
                         r_det, r_landm = (dets[idx:idx + 1], ladms[idx:idx + 1])
             else:
                 r_det, r_landm = (det[0:1], ladm[0:1])  
-            if r_det != np.array([]):
+            if len(r_det) > 0:
                 r_det[:, (0, 2)] = np.clip(r_det[:, (0, 2)], 0, img_shape[-1])
                 r_det[:, (1, 3)] = np.clip(r_det[:, (1, 3)], 0, img_shape[-2]) 
             r_dets.append(torch.from_numpy(r_det.astype(int)))

@@ -2,23 +2,13 @@
 """
 
 from omegaconf.dictconfig import DictConfig
-import torch
-import torch.nn as nn
-
-import numpy as np
-
 
 from models.gaze_det.base import BaseModel
 
-from models.gaze_det.ptgaze.common import Camera, Face, FacePartsName
+from models.gaze_det.ptgaze.common import Camera, Face
 from models.gaze_det.ptgaze.head_pose_estimation import (
-    HeadPoseNormalizer,
-    LandmarkEstimator,
+    HeadPoseNormalizer
 )
-from models.gaze_det.ptgaze.models import create_model
-from models.gaze_det.ptgaze.transforms import create_transform
-from models.gaze_det.ptgaze.utils import get_3d_face_model
-
 from models.gaze_det.ptgaze.common.face_model_68 import FaceModel68
 
 
@@ -26,9 +16,6 @@ class Face3DModel(BaseModel):
     def __init__(self, config: DictConfig):
         super(Face3DModel, self).__init__()
         self._config = config
-        assert (
-            config.mode == "MPIIGaze" or config.mode == "ETH-XGaze"
-        ), "Only ETH-XGaze and MPIIGaze are supported"
         self._face_model3d = FaceModel68()
         self.camera = Camera(config.gaze_estimator.camera_params)
         self._normalized_camera = Camera(config.gaze_estimator.normalized_camera_params)
