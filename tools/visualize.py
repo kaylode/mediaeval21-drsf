@@ -3,6 +3,7 @@ import logging
 import pathlib
 from typing import Optional
 
+import os
 import cv2
 import numpy as np
 from omegaconf import DictConfig
@@ -10,16 +11,16 @@ from omegaconf import DictConfig
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from estimator import Estimator
 from models.gaze_det.ptgaze.common.face_model_68 import FaceModel68
 from models.gaze_det.ptgaze.common import Face, FacePartsName
+from utils.estimator import Estimator
 from utils.visualizer import Visualizer
 from models.gaze_det.ptgaze.configs.default_config import get_config
 
 import argparse
 parser = argparse.ArgumentParser("Video Inference")
-parser.add_argument("--video_path", "-i", type=str, required=True, help="Video input path")
-parser.add_argument("--output_path", "-o", type=str, help="Video output path")
+parser.add_argument("--input_path", "-i", type=str, required=True, help="Video input path")
+parser.add_argument("--output_path", "-o", type=str, default='.', help="Video output path")
 parser.add_argument("--detector", "-d", type=str, default="retinaface", help="detector")
 parser.add_argument("--alignment", "-a", type=str, default="fan", help="alignment")
 parser.add_argument("--gaze", "-z", type=str, default="ETH-XGaze", help="gaze")
@@ -29,7 +30,9 @@ class Demo:
 
     def __init__(self, args, config: DictConfig):
         self.config = config
-
+        
+        self.input_path = args.input_path
+        self.output_path = args.output_path
         self.gaze_estimator = Estimator.from_name(
             det_name=args.detector,
             align_name=args.alignment,
@@ -49,47 +52,31 @@ class Demo:
         self.show_bbox = self.config.demo.show_bbox
         self.show_head_pose = self.config.demo.show_head_pose
         self.show_landmarks = self.config.demo.show_landmarks
-        self.show_normalized_image = self.config.demo.show_normalized_image
         self.show_template_model = self.config.demo.show_template_model
 
     def run(self) -> None:
-        if self.config.demo.use_camera or self.config.demo.video_path:
+        extension = os.path.slitext(self.input_path)
+        if extension in ['.mp4', '.avi']:
             self._run_on_video()
-        elif self.config.demo.image_path:
+        elif extension in ['.jpg', '.jpeg', '.png']:
             self._run_on_image()
         else:
             raise ValueError
 
     def _run_on_image(self):
-        image = cv2.imread(self.config.demo.image_path)
+        image = cv2.imread(self.input_path)
         self._process_image(image)
-        if self.config.demo.display_on_screen:
-            while True:
-                key_pressed = self._wait_key()
-                if self.stop:
-                    break
-                if key_pressed:
-                    self._process_image(image)
-                cv2.imshow("image", self.visualizer.image)
-        if self.config.demo.output_dir:
-            name = pathlib.Path(self.config.demo.image_path).name
-            output_path = pathlib.Path(self.config.demo.output_dir) / name
+        if self.output_path:
+            name = os.path.basename(self.input_path)
+            output_path = pathlib.Path(self.output_path) / name
             cv2.imwrite(output_path.as_posix(), self.visualizer.image)
 
     def _run_on_video(self) -> None:
         while True:
-            if self.config.demo.display_on_screen:
-                self._wait_key()
-                if self.stop:
-                    break
-
             ok, frame = self.cap.read()
             if not ok:
                 break
             self._process_image(frame)
-
-            if self.config.demo.display_on_screen:
-                cv2.imshow("frame", self.visualizer.image)
         self.cap.release()
         if self.writer:
             self.writer.release()
@@ -111,30 +98,20 @@ class Demo:
         self._draw_landmarks(face)
         self._draw_face_template_model(face)
         self._draw_gaze_vector(face)
-        self._display_normalized_image(face)
 
-        if self.config.demo.use_camera:
-            self.visualizer.image = self.visualizer.image[:, ::-1]
-        if self.writer:
-            self.writer.write(self.visualizer.image)
+        self.visualizer.image = self.visualizer.image[:, ::-1]
+        self.writer.write(self.visualizer.image)
 
     def _create_capture(self) -> Optional[cv2.VideoCapture]:
-        if self.config.demo.image_path:
-            return None
-        if self.config.demo.use_camera:
-            cap = cv2.VideoCapture(0)
-        elif self.config.demo.video_path:
-            cap = cv2.VideoCapture(self.config.demo.video_path)
-        else:
-            raise ValueError
+        cap = cv2.VideoCapture(self.input_path)
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.gaze_estimator.camera.width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.gaze_estimator.camera.height)
         return cap
 
     def _create_output_dir(self) -> Optional[pathlib.Path]:
-        if not self.config.demo.output_dir:
+        if not self.output_path:
             return
-        output_dir = pathlib.Path(self.config.demo.output_dir)
+        output_dir = pathlib.Path(self.output_path)
         output_dir.mkdir(exist_ok=True, parents=True)
         return output_dir
 
@@ -144,24 +121,20 @@ class Demo:
         return dt.strftime("%Y%m%d_%H%M%S")
 
     def _create_video_writer(self) -> Optional[cv2.VideoWriter]:
-        if self.config.demo.image_path:
+
+        extension = os.path.slitext(self.input_path)
+        if extension in ['.jpg', '.jpeg', '.png']:
             return None
-        if not self.output_dir:
-            return None
-        ext = self.config.demo.output_file_extension
-        if ext == "mp4":
-            fourcc = cv2.VideoWriter_fourcc(*"H264")
-        elif ext == "avi":
-            fourcc = cv2.VideoWriter_fourcc("M", "J", "P", "G")
-        else:
-            raise ValueError
-        if self.config.demo.use_camera:
-            output_name = f"{self._create_timestamp()}.{ext}"
-        elif self.config.demo.video_path:
-            name = pathlib.Path(self.config.demo.video_path).stem
-            output_name = f"{name}.{ext}"
-        else:
-            raise ValueError
+        elif extension in ['.mp4', '.avi']:
+            if extension == "mp4":
+                fourcc = cv2.VideoWriter_fourcc(*"H264")
+            elif extension == "avi":
+                fourcc = cv2.VideoWriter_fourcc("M", "J", "P", "G")
+            else:
+                raise ValueError
+        
+        name = pathlib.Path(self.input_path).stem
+        output_name = f"{name}.{extension}"
         output_path = self.output_dir / output_name
         writer = cv2.VideoWriter(
             output_path.as_posix(),
@@ -219,23 +192,6 @@ class Demo:
         if not self.show_template_model:
             return
         self.visualizer.draw_3d_points(face.model3d, color=(255, 0, 525), size=1)
-
-    def _display_normalized_image(self, face: Face) -> None:
-        if not self.config.demo.display_on_screen:
-            return
-        if not self.show_normalized_image:
-            return
-        if self.config.mode == "MPIIGaze":
-            reye = face.reye.normalized_image
-            leye = face.leye.normalized_image
-            normalized = np.hstack([reye, leye])
-        elif self.config.mode in ["MPIIFaceGaze", "ETH-XGaze"]:
-            normalized = face.normalized_image
-        else:
-            raise ValueError
-        if self.config.demo.use_camera:
-            normalized = normalized[:, ::-1]
-        cv2.imshow("normalized", normalized)
 
     def _draw_gaze_vector(self, face: Face) -> None:
         length = self.config.demo.gaze_visualization_length

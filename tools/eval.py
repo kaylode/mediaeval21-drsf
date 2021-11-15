@@ -3,27 +3,19 @@ from tqdm.auto import tqdm
 import cv2
 import os
 import sys
+import torch
 import argparse
 from models import face_det, face_align, gaze_det
 from attack.attacker import generate_tensors
 from sklearn.metrics.pairwise import paired_euclidean_distances, paired_cosine_distances
+from models.gaze_det.ptgaze.utils import compute_angle_error
 
 parser = argparse.ArgumentParser("Video De-identification Evaluation")
-parser.add_argument(
-    "video1", type=str, help="Video path"
-)
-parser.add_argument(
-    "video2", type=str, help="Video path"
-)
-parser.add_argument(
-    "--detector", "-d", type=str, default="retinaface", help="Victim detector"
-)
-parser.add_argument(
-    "--alignment", "-a", type=str, default="fan", help="Victim alignment"
-)
-parser.add_argument(
-    "--gaze", "-g", type=str, default="ETH-XGaze", help="Victim gaze"
-)
+parser.add_argument("video1", type=str, help="Video path")
+parser.add_argument("video2", type=str, help="Video path")
+parser.add_argument("--detector", "-d", type=str, default="retinaface", help="Victim detector")
+parser.add_argument("--alignment", "-a", type=str, default="fan", help="Victim alignment")
+parser.add_argument("--gaze", "-z", type=str, default="ETH-XGaze", help="Victim gaze")
 
 def calc_iou(boxA, boxB):
     # determine the (x, y)-coordinates of the intersection rectangle
@@ -83,7 +75,9 @@ class Evaluator:
 
         cosine_dist = paired_cosine_distances(euler_angles1, euler_angles2).mean()
 
-        return cosine_dist
+        angle_error = compute_angle_error(torch.from_numpy(gaze_results[0]), torch.from_numpy(gaze_results[1]))
+
+        return cosine_dist, angle_error
 
     def evaluate(self, frame1, frame2):
 
@@ -96,10 +90,9 @@ class Evaluator:
             eval_results['lm_edist'] = lm_dist
 
         if self.gaze_model is not None:
-            gaze_dist = self._evaluate_gaze(frame1, frame2, bboxes, landmarks)
+            gaze_dist, angle_error = self._evaluate_gaze(frame1, frame2, bboxes, landmarks)
             eval_results['gaze_cosine_dist'] = gaze_dist
-
-        return eval_results
+            eval_results['angle_error'] = angle_error
 
 class AvgMeter:
     def __init__(self):
