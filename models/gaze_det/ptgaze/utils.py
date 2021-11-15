@@ -5,16 +5,17 @@ import operator
 import pathlib
 
 import cv2
+import numpy as np
 import torch.hub
 import yaml
 from omegaconf import DictConfig
+from typing import Tuple
 
 from .common.face_model import FaceModel
 from .common.face_model_68 import FaceModel68
 from .common.face_model_mediapipe import FaceModelMediaPipe
 
 logger = logging.getLogger(__name__)
-
 
 def get_3d_face_model(config: DictConfig) -> FaceModel:
     if config.face_detector.mode == "mediapipe":
@@ -176,3 +177,26 @@ def check_path_all(config: DictConfig) -> None:
         _check_path(config, "demo.image_path")
     if config.demo.video_path:
         _check_path(config, "demo.video_path")
+
+
+def convert_to_unit_vector(
+        angles: torch.Tensor
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    pitches = angles[:, 0]
+    yaws = angles[:, 1]
+    x = -torch.cos(pitches) * torch.sin(yaws)
+    y = -torch.sin(pitches)
+    z = -torch.cos(pitches) * torch.cos(yaws)
+    norm = torch.sqrt(x**2 + y**2 + z**2)
+    x /= norm
+    y /= norm
+    z /= norm
+    return x, y, z
+
+
+def compute_angle_error(predictions: torch.Tensor,
+                        labels: torch.Tensor) -> torch.Tensor:
+    pred_x, pred_y, pred_z = convert_to_unit_vector(predictions)
+    label_x, label_y, label_z = convert_to_unit_vector(labels)
+    angles = pred_x * label_x + pred_y * label_y + pred_z * label_z
+    return torch.acos(angles) * 180 / np.pi
