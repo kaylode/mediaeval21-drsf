@@ -11,9 +11,9 @@ from .face3d import Face3DModel
 from models.gaze_det.ptgaze.configs.default_config import get_config
 
 class GazeModel(BaseModel):
-    def __init__(self, name, loss_fn: str = "l2"):
+    def __init__(self, name, width, height, loss_fn: str = "l2"):
         super(GazeModel, self).__init__()
-        self._config = get_config(name)
+        self._config = get_config(name, width, height)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self._gaze_estimation_model = self._load_model()
         self._face3d = Face3DModel(self._config)

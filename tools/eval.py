@@ -3,27 +3,19 @@ from tqdm.auto import tqdm
 import cv2
 import os
 import sys
+import torch
 import argparse
 from models import face_det, face_align, gaze_det
 from attack.attacker import generate_tensors
 from sklearn.metrics.pairwise import paired_euclidean_distances, paired_cosine_distances
+from models.gaze_det.ptgaze.utils import compute_angle_error
 
 parser = argparse.ArgumentParser("Video De-identification Evaluation")
-parser.add_argument(
-    "video1", type=str, help="Video path"
-)
-parser.add_argument(
-    "video2", type=str, help="Video path"
-)
-parser.add_argument(
-    "--detector", "-d", type=str, default="retinaface", help="Victim detector"
-)
-parser.add_argument(
-    "--alignment", "-a", type=str, default="fan", help="Victim alignment"
-)
-parser.add_argument(
-    "--gaze", "-g", type=str, default="ETH-XGaze", help="Victim gaze"
-)
+parser.add_argument("video1", type=str, help="Video path")
+parser.add_argument("video2", type=str, help="Video path")
+parser.add_argument("--detector", "-d", type=str, default="retinaface", help="Victim detector")
+parser.add_argument("--alignment", "-a", type=str, default="fan", help="Victim alignment")
+parser.add_argument("--gaze", "-z", type=str, default="ETH-XGaze", help="Victim gaze")
 
 def calc_iou(boxA, boxB):
     # determine the (x, y)-coordinates of the intersection rectangle
@@ -82,8 +74,9 @@ class Evaluator:
         euler_angles2 = faces[1].head_pose_rot.as_euler("XYZ", degrees=True).reshape((1, 3))
 
         cosine_dist = paired_cosine_distances(euler_angles1, euler_angles2).mean()
-
-        return cosine_dist
+        angle_error = compute_angle_error(torch.from_numpy(gaze_results[0]).unsqueeze(0), torch.from_numpy(gaze_results[1]).unsqueeze(0))
+        angle_error = float(angle_error.item())
+        return cosine_dist, angle_error
 
     def evaluate(self, frame1, frame2):
 
@@ -96,9 +89,9 @@ class Evaluator:
             eval_results['lm_edist'] = lm_dist
 
         if self.gaze_model is not None:
-            gaze_dist = self._evaluate_gaze(frame1, frame2, bboxes, landmarks)
+            gaze_dist, angle_error = self._evaluate_gaze(frame1, frame2, bboxes, landmarks)
             eval_results['gaze_cosine_dist'] = gaze_dist
-
+            eval_results['angle_error'] = angle_error
         return eval_results
 
 class AvgMeter:
@@ -167,7 +160,7 @@ if __name__ == "__main__":
 
     det_model = face_det.get_model(args.detector)
     align_model = face_align.get_model(args.alignment)
-    gaze_model = gaze_det.GazeModel(args.gaze)
+    gaze_model = gaze_det.GazeModel(args.gaze, width, height)
     evaluator = Evaluator(det_model, align_model, gaze_model)
 
     while True:

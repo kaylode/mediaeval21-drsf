@@ -5,7 +5,7 @@ from models.gaze_det.ptgaze.utils import (
     generate_dummy_camera_params,
 )
 
-def get_config(name):
+def get_config(name, width, height):
 
     if name == 'ETH-XGaze':
         test_params = {
@@ -20,19 +20,11 @@ def get_config(name):
                 "image_size": [224, 224],
             },
             "demo": {
-                "use_camera": False,
-                "display_on_screen": False,
-                "wait_time": 1,
-                "image_path": None,
-                "video_path": "./assets/T002_ActionsShorter_mini_8829_9061_Talk-non-cell.mp4",
-                "output_dir": ".",
-                "output_file_extension": "avi",
                 "head_pose_axis_length": 0.05,
                 "gaze_visualization_length": 0.05,
                 "show_bbox": True,
                 "show_head_pose": True,
                 "show_landmarks": False,
-                "show_normalized_image": False,
                 "show_template_model": True,
             },
         }
@@ -55,19 +47,11 @@ def get_config(name):
                 "image_size": [224, 224],
             },
             "demo": {
-                "use_camera": False,
-                "display_on_screen": False,
-                "wait_time": 1,
-                "image_path": None,
-                "video_path": "./assets/T002_ActionsShorter_mini_8829_9061_Talk-non-cell.mp4",
-                "output_dir": ".",
-                "output_file_extension": "avi",
                 "head_pose_axis_length": 0.05,
                 "gaze_visualization_length": 0.05,
                 "show_bbox": True,
                 "show_head_pose": True,
                 "show_landmarks": False,
-                "show_normalized_image": False,
                 "show_template_model": True,
             },
         }
@@ -76,5 +60,5 @@ def get_config(name):
 
     config = DictConfig(test_params)
     if config.gaze_estimator.use_dummy_camera_params:
-        generate_dummy_camera_params(config)
+        config.gaze_estimator.camera_params = generate_dummy_camera_params(width, height)
     return config
