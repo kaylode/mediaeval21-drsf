@@ -21,11 +21,12 @@ class Estimator:
         det_name: str,
         align_name: str,
         gaze_name: str,
+        width: int, height: int
     ) -> "Estimator":
         det_model = face_det.get_model(det_name)
         align_model = face_align.get_model(align_name)
 
-        gaze_model = gaze_det.get_model("GazeModel", name=gaze_name)
+        gaze_model = gaze_det.get_model("GazeModel", name=gaze_name, width=width, height=height)
         return cls(det_model, align_model, gaze_model)
 
     @torch.no_grad()

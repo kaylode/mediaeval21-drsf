@@ -6,7 +6,6 @@ from typing import Optional
 import os
 import cv2
 import numpy as np
-from omegaconf import DictConfig
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,15 +27,18 @@ parser.add_argument("--gaze", "-z", type=str, default="ETH-XGaze", help="gaze")
 class Demo:
     QUIT_KEYS = {27, ord("q")}
 
-    def __init__(self, args, config: DictConfig):
-        self.config = config
+    def __init__(self, args):
+
         
         self.input_path = args.input_path
         self.output_path = args.output_path
+        width, height = self.get_width_height(self.input_path)
+        self.config = get_config(args.gaze, width, height)
         self.gaze_estimator = Estimator.from_name(
             det_name=args.detector,
             align_name=args.alignment,
             gaze_name=args.gaze,
+            width=width , height= height
         )
 
         face_model_3d = FaceModel68()
@@ -53,6 +55,21 @@ class Demo:
         self.show_head_pose = self.config.demo.show_head_pose
         self.show_landmarks = self.config.demo.show_landmarks
         self.show_template_model = self.config.demo.show_template_model
+
+    def get_width_height(self, path):
+        extension = os.path.slitext(path)
+        if extension in ['.mp4', '.avi']:
+            image = cv2.imread(path)
+            h, w = image.shape[:2]
+        elif extension in ['.jpg', '.jpeg', '.png']:
+            cap = cv2.VideoCapture(path)
+            if not cap.isOpened():
+                raise RuntimeError(f"{path} is not opened.")
+            h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            cap.release()
+
+        return w, h
 
     def run(self) -> None:
         extension = os.path.slitext(self.input_path)
@@ -216,6 +233,5 @@ class Demo:
 if __name__ == "__main__":
 
     args = parser.parse_args()
-    config = get_config(args.gaze)
-    demo = Demo(args, config)
+    demo = Demo(args)
     demo.run()

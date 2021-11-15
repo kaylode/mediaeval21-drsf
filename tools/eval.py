@@ -160,7 +160,7 @@ if __name__ == "__main__":
 
     det_model = face_det.get_model(args.detector)
     align_model = face_align.get_model(args.alignment)
-    gaze_model = gaze_det.GazeModel(args.gaze)
+    gaze_model = gaze_det.GazeModel(args.gaze, width, height)
     evaluator = Evaluator(det_model, align_model, gaze_model)
 
     while True:

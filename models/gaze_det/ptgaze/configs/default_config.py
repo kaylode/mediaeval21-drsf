@@ -5,7 +5,7 @@ from models.gaze_det.ptgaze.utils import (
     generate_dummy_camera_params,
 )
 
-def get_config(name):
+def get_config(name, width, height):
 
     if name == 'ETH-XGaze':
         test_params = {
@@ -60,5 +60,5 @@ def get_config(name):
 
     config = DictConfig(test_params)
     if config.gaze_estimator.use_dummy_camera_params:
-        generate_dummy_camera_params(config)
+        config.gaze_estimator.camera_params = generate_dummy_camera_params(width, height)
     return config
