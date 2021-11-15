@@ -16,7 +16,7 @@ The goal of this project is to explore adversarial methods for obscuring driver 
 
 - To de-identify video with adversarial attack, run
 ```
-PYTHONPATH=.    python tools/attack.py  -i <input_video> \
+PYTHONPATH=.    python tools/deid.py  -i <input_video> \
                                         -o <output_video> \
                                         -d [retinaface, mtcnn] \                 # Victim detector
                                         -a [fan] \                               # Victim alignment
