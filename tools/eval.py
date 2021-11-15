@@ -92,6 +92,7 @@ class Evaluator:
             gaze_dist, angle_error = self._evaluate_gaze(frame1, frame2, bboxes, landmarks)
             eval_results['gaze_cosine_dist'] = gaze_dist
             eval_results['angle_error'] = angle_error
+            eval_results['diffscore'] = (1-iou_score) + lm_dist + angle_error
         return eval_results
 
 class AvgMeter:
