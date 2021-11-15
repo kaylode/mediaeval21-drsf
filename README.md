@@ -12,25 +12,40 @@ The goal of this project is to explore adversarial methods for obscuring driver 
 | <img width="450" alt="screen" src="assets/results/ori5.jpg"> | <img width="450" alt="screen" src="assets/results/raw5.jpg"> | <img width="450" alt="screen" src="assets/results/deid5.jpg"> |
 
 
-## Non-targeted attack
+## De-identification Attack
 
-```bash
-python run.py           <video1> <video2> \
-                        -d [retinaface, mtcnn] \                 # Victim detector
-                        -a [fan] \                               # Victim alignment
-                        -z [MPIIFaceGaze, ETH-XGaze] \           # Victim gaze estimator
-                        -g [rmsprop, i-fgsm, mi-fgsm] \          # Attack method
-                        -m [pixelate, blur] \                    # Deid method
-                        -bs 16                                   # Batch size
+- To de-identify video with adversarial attack, run
+```
+PYTHONPATH=.    python tools/attack.py  -i <input_video> \
+                                        -o <output_video> \
+                                        -d [retinaface, mtcnn] \                 # Victim detector
+                                        -a [fan] \                               # Victim alignment
+                                        -z [MPIIFaceGaze, ETH-XGaze] \           # Victim gaze estimator
+                                        -g [rmsprop, i-fgsm, mi-fgsm, ...] \     # Attack method
+                                        -m [pixelate_30, blur_30] \              # Deid method with level
+                                        -bs 16                                   # Batch size
 ```
 
 ## Evaluation
 
-```bash
-python evaluation.py    <video1> <video2> \
-                        -d [retinaface, mtcnn] \
-                        -a [fan] \
-                        -g [MPIIFaceGaze, ETH-XGaze]
+- Compare two videos based on its face bboxes IOU, facial landmarks euclide distance, gaze vectors cosine angle, ...
+```
+PYTHONPATH=.    python tools/eval.py    <video1> <video2> \
+                                        -d [retinaface, mtcnn] \
+                                        -a [fan] \
+                                        -z [MPIIFaceGaze, ETH-XGaze]
+```
+
+## Visualization
+
+- To inference detection and estimation models on video, run
+
+```
+PYTHONPATH=.    python tools/visualize.py   -i <input_video> \
+                                            -o <output_video> \
+                                            -d [retinaface, mtcnn] \
+                                            -a [fan] \
+                                            -z [MPIIFaceGaze, ETH-XGaze]
 ```
 
 ## Colab Notebooks
