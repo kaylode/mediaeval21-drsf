@@ -10,7 +10,7 @@ from attack.attacker import generate_tensors
 
 parser = argparse.ArgumentParser("Video De-identification Evaluation")
 parser.add_argument("--input_path", '-i', type=str, help="Video path")
-parser.add_argument("--output_path", type=str, help="Output JSON path")
+parser.add_argument("--output_path", '-o', type=str, help="Output JSON path")
 parser.add_argument("--detector", "-d", type=str, default="retinaface", help="Victim detector")
 parser.add_argument("--alignment", "-a", type=str, default="fan", help="Victim alignment")
 parser.add_argument("--gaze", "-z", type=str, default="ETH-XGaze", help="Victim gaze")
@@ -54,21 +54,21 @@ class Predictor:
 
         predict_results = {}
         bboxes = self._predict_detection(frame)
-        predict_results['bboxes'] = bboxes
+        predict_results['bboxes'] = bboxes[0]
 
         landmarks = self._predict_alignment(frame, bboxes)
-        predict_results['landmarks'] = landmarks
+        predict_results['landmarks'] = [i.tolist() for i in landmarks][0]
 
         gaze_results, euler_angles = self._predict_gaze(frame, bboxes, landmarks)
-        predict_results['gaze_vector'] = gaze_results
-        predict_results['euler_angles'] = euler_angles
+        predict_results['gaze_vector'] = gaze_results.tolist()[0]
+        predict_results['euler_angles'] = euler_angles.tolist()[0]
         return predict_results
 
 
 if __name__ == "__main__":
     args = parser.parse_args()
     # get video file path
-    video_path = args.video1
+    video_path = args.input_path
     # get video file name
     video_name = os.path.splitext(os.path.basename(video_path))[0]
     # get video object
@@ -100,14 +100,12 @@ if __name__ == "__main__":
         ret, frame = cap.read()
         if not ret:
             break
-        try:
-            results = evaluator.predict(frame)
-            result_dict.update(results)
-        except:
-            result_dict['bboxes'] = []
-            result_dict['landmarks'] = []
-            result_dict['gaze_vector'] = []
-            result_dict['euler_angles'] = []
+        results = evaluator.predict(frame)
+        result_dict.update(results)
+        # result_dict['bboxes'] = []
+        # result_dict['landmarks'] = []
+        # result_dict['gaze_vector'] = []
+        # result_dict['euler_angles'] = []
 
         frame_idx += 1
         pbar.update(1)

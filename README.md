@@ -29,11 +29,19 @@ PYTHONPATH=.    python tools/deid.py  -i <input_video> \
 ## Evaluation
 
 - Compare two videos based on its face bboxes IOU, facial landmarks euclide distance, gaze vectors cosine angle, ...
+
+- First, we inference a video and outputs a JSON file contains predictions.
 ```
-PYTHONPATH=.    python tools/eval.py    <video1> <video2> \
-                                        -d [retinaface, mtcnn] \
-                                        -a [fan] \
-                                        -z [MPIIFaceGaze, ETH-XGaze]
+PYTHONPATH=.    python tools/inference.py   -i <input_video> \
+                                            -d [retinaface, mtcnn] \
+                                            -a [fan] \
+                                            -z [MPIIFaceGaze, ETH-XGaze]
+```
+
+- Then, we evaluate it with the ground truth JSON.
+```
+PYTHONPATH=.    python tools/eval_json.py   --json_gt <ground truth json> \
+                                            --pred_gt <prediction json> 
 ```
 
 ## Visualization

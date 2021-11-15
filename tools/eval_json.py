@@ -77,8 +77,9 @@ class Evaluator:
         return dist
 
     def _evaluate_gaze(self, gaze1, gaze2, euler_angles1, euler_angles2):
-        cosine_dist = paired_cosine_distances(euler_angles1, euler_angles2).mean()
-        angle_error = compute_angle_error(torch.from_numpy(gaze1).unsqueeze(0), torch.from_numpy(gaze2).unsqueeze(0))
+        cosine_dist = paired_cosine_distances([euler_angles1], [euler_angles2]).mean()
+
+        angle_error = compute_angle_error(torch.FloatTensor([gaze1]), torch.FloatTensor([gaze2]))
         angle_error = float(angle_error.item())
         return cosine_dist, angle_error
 
@@ -88,19 +89,18 @@ class Evaluator:
         iou_score = self._evaluate_detection(dict1['bboxes'], dict2['bboxes'])
         eval_results['box_iou'] = iou_score
 
-        if self.align_model is not None:
-            lm_dist = self._evaluate_alignment(dict1['landmarks'], dict2['landmarks'])
-            eval_results['lm_edist'] = lm_dist
+        lm_dist = self._evaluate_alignment(dict1['landmarks'], dict2['landmarks'])
+        eval_results['lm_edist'] = lm_dist
 
-        if self.gaze_model is not None:
-            gaze_dist, angle_error = self._evaluate_gaze(
-                dict1['gaze_vector'], 
-                dict2['gaze_vector'], 
-                dict1['euler_angles'], 
-                dict2['euler_angles']
-            )
-            eval_results['gaze_cosine_dist'] = gaze_dist
-            eval_results['angle_error'] = angle_error
+        gaze_dist, angle_error = self._evaluate_gaze(
+            dict1['gaze_vector'], 
+            dict2['gaze_vector'], 
+            dict1['euler_angles'], 
+            dict2['euler_angles']
+        )
+        eval_results['gaze_cosine_dist'] = gaze_dist
+        eval_results['angle_error'] = angle_error
+
         return eval_results
 
     def get_results(self):
@@ -122,5 +122,5 @@ class Evaluator:
 if __name__ == "__main__":
     args = parser.parse_args()
     
-    evaluator = Evaluator(args.pred_json, args.gt_json)
+    evaluator = Evaluator(args.json_pred, args.json_gt)
     evaluator.get_results()

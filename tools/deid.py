@@ -37,8 +37,6 @@ def get_width_height(path):
         h, w = image.shape[:2]
     elif extension in ['.mp4', '.avi']:
         cap = cv2.VideoCapture(path)
-        if not cap.isOpened():
-            raise RuntimeError(f"{path} is not opened.")
         h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         cap.release()
