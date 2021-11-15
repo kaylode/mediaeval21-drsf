@@ -31,11 +31,11 @@ parser.add_argument("--max_iter", type=int, default=150, help="Maximum number of
 parser.add_argument("--batch_size", "-bs", type=int, default=16, help="Batch size")
 
 def get_width_height(path):
-    extension = os.path.slitext(path)
-    if extension in ['.mp4', '.avi']:
+    extension = os.path.splitext(path)[1]
+    if extension in ['.jpg', '.jpeg', '.png']:
         image = cv2.imread(path)
         h, w = image.shape[:2]
-    elif extension in ['.jpg', '.jpeg', '.png']:
+    elif extension in ['.mp4', '.avi']:
         cap = cv2.VideoCapture(path)
         if not cap.isOpened():
             raise RuntimeError(f"{path} is not opened.")

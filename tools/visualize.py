@@ -57,22 +57,21 @@ class Demo:
         self.show_template_model = self.config.demo.show_template_model
 
     def get_width_height(self, path):
-        extension = os.path.slitext(path)
-        if extension in ['.mp4', '.avi']:
+        extension = os.path.splitext(path)[1]
+        if extension in ['.jpg', '.jpeg', '.png']:
             image = cv2.imread(path)
             h, w = image.shape[:2]
-        elif extension in ['.jpg', '.jpeg', '.png']:
+        elif extension in ['.mp4', '.avi']:
             cap = cv2.VideoCapture(path)
             if not cap.isOpened():
                 raise RuntimeError(f"{path} is not opened.")
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             cap.release()
-
         return w, h
 
     def run(self) -> None:
-        extension = os.path.slitext(self.input_path)
+        extension = os.path.splitext(self.input_path)[1]
         if extension in ['.mp4', '.avi']:
             self._run_on_video()
         elif extension in ['.jpg', '.jpeg', '.png']:
@@ -139,24 +138,22 @@ class Demo:
 
     def _create_video_writer(self) -> Optional[cv2.VideoWriter]:
 
-        extension = os.path.slitext(self.input_path)
+        extension = os.path.splitext(self.input_path)[1]
         if extension in ['.jpg', '.jpeg', '.png']:
             return None
         elif extension in ['.mp4', '.avi']:
-            if extension == "mp4":
-                fourcc = cv2.VideoWriter_fourcc(*"H264")
-            elif extension == "avi":
-                fourcc = cv2.VideoWriter_fourcc("M", "J", "P", "G")
-            else:
-                raise ValueError
+            fourcc = cv2.VideoWriter_fourcc("M", "J", "P", "G")
+        else:
+            raise ValueError
         
         name = pathlib.Path(self.input_path).stem
-        output_name = f"{name}.{extension}"
+        FPS = int(self.cap.get(cv2.CAP_PROP_FPS))
+        output_name = f"{name}.avi"
         output_path = self.output_dir / output_name
         writer = cv2.VideoWriter(
             output_path.as_posix(),
             fourcc,
-            30,
+            FPS,
             (self.gaze_estimator.camera.width, self.gaze_estimator.camera.height),
         )
         if writer is None:

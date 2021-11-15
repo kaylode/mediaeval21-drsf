@@ -74,9 +74,8 @@ class Evaluator:
         euler_angles2 = faces[1].head_pose_rot.as_euler("XYZ", degrees=True).reshape((1, 3))
 
         cosine_dist = paired_cosine_distances(euler_angles1, euler_angles2).mean()
-
-        angle_error = compute_angle_error(torch.from_numpy(gaze_results[0]), torch.from_numpy(gaze_results[1]))
-
+        angle_error = compute_angle_error(torch.from_numpy(gaze_results[0]).unsqueeze(0), torch.from_numpy(gaze_results[1]).unsqueeze(0))
+        angle_error = float(angle_error.item())
         return cosine_dist, angle_error
 
     def evaluate(self, frame1, frame2):
@@ -93,6 +92,7 @@ class Evaluator:
             gaze_dist, angle_error = self._evaluate_gaze(frame1, frame2, bboxes, landmarks)
             eval_results['gaze_cosine_dist'] = gaze_dist
             eval_results['angle_error'] = angle_error
+        return eval_results
 
 class AvgMeter:
     def __init__(self):
