@@ -286,7 +286,20 @@ class MTCNN(nn.Module):
                 self.device
             )
 
-        return batch_boxes, batch_points, gt_feats
+        batch_boxes_largest = []
+        batch_points_largest = []
+
+        for box, point in zip(batch_boxes, batch_points):
+            box = box[box[:, -1].argsort()][::-1]
+            if self.select_largest and len(box) > 0:
+                if len(box) > 0:
+                    box = np.expand_dims(box[0, :], axis=0)
+                if len(point) > 0:
+                    point = np.expand_dims(point[0, :], axis=0)
+            batch_boxes_largest.append(box)
+            batch_points_largest.append(point)
+        
+        return batch_boxes_largest, batch_points_largest, gt_feats
 
     def select_boxes(
         self, all_boxes, all_probs, all_points, imgs, method='probability', threshold=0.9,

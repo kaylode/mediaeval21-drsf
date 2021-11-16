@@ -100,7 +100,7 @@ class Evaluator:
         )
         eval_results['gaze_cosine_dist'] = gaze_dist
         eval_results['angle_error'] = angle_error
-
+        eval_results['diffscore'] = (1-iou_score) + lm_dist + angle_error
         return eval_results
 
     def get_results(self):
