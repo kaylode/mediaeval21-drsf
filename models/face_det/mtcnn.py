@@ -42,6 +42,7 @@ class MTCNNDetector(BaseDetector):
         )
 
     def preprocess(self, images):
+        
         images = np.stack(images, axis=0)
         normalized = fixed_image_standardization(images)
         return normalized
@@ -59,6 +60,8 @@ class MTCNNDetector(BaseDetector):
         loss = 0
         for stage_feat, stage_target_feat in zip(feats, target_feats):
             for feat, target_feat in zip(stage_feat, stage_target_feat):
+                feat = feat['f']
+                target_feat = target_feat['f']
                 for f, t in zip(feat, target_feat):
                     loss += self.loss_fn(f, t)
         return loss

@@ -72,11 +72,11 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, targ
         im_data = imresample(imgs, (int(h * scale + 1), int(w * scale + 1)))
         # im_data = (im_data - 127.5) * 0.0078125
         reg, probs = pnet(im_data)
-        stage_1_regs.append([reg, probs])
+        stage_1_regs.append({'f': reg, 'p': probs})
 
         if target_feats is not None:
-            reg = target_feats[0][idx][0]
-            probs = target_feats[0][idx][1]
+            reg = target_feats[0][idx]['f']
+            probs = target_feats[0][idx]['p']
     
         boxes_scale, image_inds_scale = generateBoundingBox(reg, probs[:, 1], scale, threshold[0])
         boxes.append(boxes_scale)
@@ -122,10 +122,10 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, targ
 
         # This is equivalent to out = rnet(im_data) to avoid GPU out of memory.
         out = fixed_batch_process(im_data, rnet)
-        stage_2_regs.append(out)
+        stage_2_regs.append({'f': out[0], 'p':out[1]})
 
         if target_feats is not None:
-            out = target_feats[1][0]
+            out = [target_feats[1][0]['f'], target_feats[1][0]['p']]
 
         out0 = out[0].permute(1, 0)
         out1 = out[1].permute(1, 0)
@@ -156,10 +156,10 @@ def detect_face(imgs, minsize, pnet, rnet, onet, threshold, factor, device, targ
         
         # This is equivalent to out = onet(im_data) to avoid GPU out of memory.
         out = fixed_batch_process(im_data, onet)
-        stage_3_regs.append(out)
+        stage_3_regs.append({'f': out[:2], 'p': out[-1]})
 
         if target_feats is not None:
-            out = target_feats[2][0]
+            out = [*target_feats[2][0]['f'], target_feats[2][0]['p']]
 
         out0 = out[0].permute(1, 0)
         out1 = out[1].permute(1, 0)
