@@ -44,12 +44,11 @@ class MTCNNDetector(BaseDetector):
     def preprocess(self, images):
         
         images = np.stack(images, axis=0)
-        normalized = fixed_image_standardization(images)
-        return normalized
+        return images
 
     def postprocess(self, images):
         images = images.detach().numpy()
-        unnormalized = np.clip(images * 128.0 + 127.5, 0, 255).astype(np.uint8)
+        unnormalized = np.clip(images*255, 0, 255).astype(np.uint8)
         images = unnormalized.transpose((0, 2, 3, 1))
         return images
 
