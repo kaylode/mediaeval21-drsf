@@ -117,6 +117,10 @@ PYTHONPATH=.    python tools/visualize.py   -i <input_video> \
 
 - We provive a [notebook](./assets/notebooks/MediaEval21_DRSF2.ipynb) for demo
 
+## Working note
+- Our team's working note: [HCMUS at MediaEval 2021: Facial Data De-identification with
+Adversarial Generation and Perturbation Methods](./assets/_Driving_Road_MediaEval___2021___HCMUS_.pdf)
+
 ## **Code References**
 
 - https://github.com/biubug6/Pytorch_Retinaface
