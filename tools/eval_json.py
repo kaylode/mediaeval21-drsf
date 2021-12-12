@@ -76,12 +76,12 @@ class Evaluator:
         dist = paired_euclidean_distances(landmarks1, landmarks2).mean()
         return dist
 
-    def _evaluate_gaze(self, gaze1, gaze2, euler_angles1, euler_angles2):
-        cosine_dist = paired_cosine_distances([euler_angles1], [euler_angles2]).mean()
+    def _evaluate_gaze(self, gaze1, gaze2, gaze_vector1, gaze_vector2):
+        gaze_edist = paired_euclidean_distances([gaze_vector1], [gaze_vector2]).mean()
 
         angle_error = compute_angle_error(torch.FloatTensor([gaze1]), torch.FloatTensor([gaze2]))
         angle_error = float(angle_error.item())
-        return cosine_dist, angle_error
+        return gaze_edist, angle_error
 
     def evaluate(self, dict1, dict2):
 
@@ -93,14 +93,14 @@ class Evaluator:
         eval_results['lm_edist'] = lm_dist
 
         gaze_dist, angle_error = self._evaluate_gaze(
+            dict1['gaze_angle'], 
+            dict2['gaze_angle'],
             dict1['gaze_vector'], 
-            dict2['gaze_vector'], 
-            dict1['euler_angles'], 
-            dict2['euler_angles']
+            dict2['gaze_vector']
         )
-        eval_results['gaze_cosine_dist'] = gaze_dist
+        eval_results['gaze_euclide_dist'] = gaze_dist
         eval_results['angle_error'] = angle_error
-        eval_results['diffscore'] = (1-iou_score) + lm_dist + angle_error
+        eval_results['diffscore'] = (1-iou_score) + lm_dist + gaze_dist
         return eval_results
 
     def get_results(self):

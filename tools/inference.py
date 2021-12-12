@@ -47,8 +47,8 @@ class Predictor:
         for face, gaze_vector in zip(faces, gaze_results):
             self.gaze_model._face3d.postprocess([gaze_vector], face)
 
-        euler_angles = faces[0].head_pose_rot.as_euler("XYZ", degrees=True).reshape((1, 3))
-        return gaze_results, euler_angles
+        gaze_vector = faces[0].gaze_vector[:2].reshape((1, 2)) #.head_pose_rot.as_euler("XYZ", degrees=True).reshape((1, 3))
+        return gaze_results, gaze_vector
 
     def predict(self, frame):
 
@@ -59,9 +59,9 @@ class Predictor:
         landmarks = self._predict_alignment(frame, bboxes)
         predict_results['landmarks'] = [i.tolist() for i in landmarks][0]
 
-        gaze_results, euler_angles = self._predict_gaze(frame, bboxes, landmarks)
-        predict_results['gaze_vector'] = gaze_results.tolist()[0]
-        predict_results['euler_angles'] = euler_angles.tolist()[0]
+        gaze_results, gaze_vector = self._predict_gaze(frame, bboxes, landmarks)
+        predict_results['gaze_angle'] = gaze_results.tolist()[0]
+        predict_results['gaze_vector'] = gaze_vector.tolist()[0]
         return predict_results
 
 
