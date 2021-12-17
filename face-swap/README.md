@@ -40,4 +40,4 @@ python face_swap.py --source_image "path_to_source_image" \
   - The synthesis video with audio will be saved at `demo/save_swap/ad-result.mp4`
   - The comparison video with audio will be saved at `demo/save_swap/ad-output.mp4`
 
-Example colab notebook: https://colab.research.google.com/drive/1t2HPKv0qEBpzW4H9xtFIn5nJnxcdNQ0i?usp=sharing
+Example colab notebook full pipeline: https://colab.research.google.com/drive/1t2HPKv0qEBpzW4H9xtFIn5nJnxcdNQ0i?usp=sharing
