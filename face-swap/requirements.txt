@@ -1,3 +1,6 @@
+numpy==1.15.0
+PyYAML==3.13
+scikit-image==0.14.0
 cffi
 cloudpickle
 cycler
@@ -7,7 +10,6 @@ imageio
 kiwisolver
 matplotlib
 networkx
-numpy==1.15.0
 pandas
 Pillow
 pycparser
@@ -16,8 +18,6 @@ pyparsing
 python-dateutil
 pytz
 PyWavelets
-PyYAML==3.13
-scikit-image==0.14.0
 scikit-learn
 scipy
 six
@@ -27,3 +27,4 @@ torchvision
 tqdm
 moviepy
 face_alignment
+gdown

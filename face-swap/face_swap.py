@@ -36,7 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--source_image", default='example_face.png', help="path to src image")
     parser.add_argument("--target_video", default='video/2.mp4', help="path to target video")
     parser.add_argument("--result_video", default='demo/save_swap', help="path to save")
-    parser.add_argument("--mode", default='all', help="choose in ['face', 'hair', 'all']")
+    parser.add_argument("--mode", default='face', help="choose in ['face', 'hair', 'all']")
 
     parser.add_argument("--blend_scale", default=0.125, type=float)
 
