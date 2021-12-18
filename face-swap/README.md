@@ -1,9 +1,10 @@
-# Inference code for Face Swap
+# **RUN 01: FaceSwap**
 
-##### Reference paper for Face Swap: https://arxiv.org/pdf/2004.03234.pdf
-##### This repo was modified from: https://github.com/AliaksandrSiarohin/motion-cosegmentation
+## ***Method***
 
-# Setup: 
+<p align="center"><img width="400" alt="screen" src="assets/faceswap.png"> </p>
+
+## ***Setup***: 
 - Clone the repo: 
 ```
 git clone https://github.com/kaylode/mediaeval21-drsf
@@ -27,7 +28,7 @@ mkdir demo
 mkdir demo/save_swap
 ```
 
-# Usage
+## ***Usage***
 - Run face swap
 ```
 python face_swap.py --source_image "path_to_source_image" \
@@ -41,3 +42,19 @@ python face_swap.py --source_image "path_to_source_image" \
   - The comparison video with audio will be saved at `demo/save_swap/ad-output.mp4`
 
 Example colab notebook full pipeline: https://colab.research.google.com/drive/1t2HPKv0qEBpzW4H9xtFIn5nJnxcdNQ0i?usp=sharing
+
+## **Code References**
+- This repo was modified from: https://github.com/AliaksandrSiarohin/motion-cosegmentation
+
+## **Paper References**
+
+```
+@misc{siarohin2020motionsupervised,
+      title={Motion-supervised Co-Part Segmentation}, 
+      author={Aliaksandr Siarohin and Subhankar Roy and Stéphane Lathuilière and Sergey Tulyakov and Elisa Ricci and Nicu Sebe},
+      year={2020},
+      eprint={2004.03234},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+```
