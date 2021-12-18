@@ -17,7 +17,7 @@
 
 |  Original image | Adversarial Pertubation | FaceSwap |
 | :----------------------------------------------------------: | :----------------------------------------------------------: | :-----------------------------------------------------------: |
-| <img width="250" alt="screen" src="assets/images/raw.png">  | <img width="250" alt="screen" src="assets/images/adv.png">  | <img width="250" alt="screen" src="assets/images/swap.png">  |
+| <img width="250" alt="screen" src="assets/images/raw.png">  | <img width="250" alt="screen" src="adversarial-attack/assets/results/deid_3.png">  | <img width="250" alt="screen" src="assets/images/swap.png">  |
 
 
 ## ***Working note***
